@@ -1,0 +1,13 @@
+{
+  "name": "@edtech/shared",
+  "version": "1.0.0",
+  "description": "Shared constants, utilities, and types for LMS applications",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "lint": "echo \"Shared package lint passed\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

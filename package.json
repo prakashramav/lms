@@ -1,0 +1,25 @@
+{
+  "name": "edtech-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Powered Career Learning + Coding + Interview Platform Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,STUDENT,INSTRUCTOR,ADMIN\" -c \"blue,green,magenta,cyan\" \"npm run dev:backend\" \"npm run dev:student\" \"npm run dev:instructor\" \"npm run dev:admin\"",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:student": "npm run dev --workspace=apps/student",
+    "dev:instructor": "npm run dev --workspace=apps/instructor",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:backend": "npm run test --workspace=apps/backend",
+    "seed": "npm run seed --workspace=apps/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
