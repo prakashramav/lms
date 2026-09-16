@@ -338,3 +338,77 @@ Base URL: `/api/v1`
 - **Headers**: `Authorization: Bearer <accessToken>`
 - **Response**: `200 OK` with solved counts, coding streak, topic mastery, and difficulty breakdown.
 
+---
+
+### AI Tutor Endpoints (`/api/v1/ai`)
+
+#### 1. List Conversations
+- **URL**: `GET /api/v1/ai/conversations`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Response**: `200 OK` with paginated list of conversations.
+
+#### 2. Create Conversation
+- **URL**: `POST /api/v1/ai/conversations`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "title": "New Chat", "mode": "GUIDED" | "DIRECT" | "EXPLANATION", "context": {} }`
+- **Response**: `201 Created`
+
+#### 3. Get Conversation Detail
+- **URL**: `GET /api/v1/ai/conversations/:conversationId`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Response**: `200 OK` with conversation details and full message history.
+
+#### 4. Delete Conversation
+- **URL**: `DELETE /api/v1/ai/conversations/:conversationId`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Response**: `200 OK`
+
+#### 5. Send Message (with optional SSE Streaming)
+- **URL**: `POST /api/v1/ai/conversations/:conversationId/messages`
+- **Query**: `?stream=true` (for Server-Sent Events)
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "message": "Explain closures", "context": {}, "mode": "GUIDED" }`
+- **Response**: `200 OK` (JSON) or `text/event-stream` chunks.
+
+#### 6. Progressive Coding Hint
+- **URL**: `POST /api/v1/ai/hint`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "problemId": "...", "tier": 1 | 2 | 3 | 4, "currentCode": "...", "language": "javascript" }`
+- **Response**: `200 OK` with tiered pedagogical hint.
+
+#### 7. Diagnostic Error Breakdown
+- **URL**: `POST /api/v1/ai/explain`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "problemId": "...", "code": "...", "language": "javascript", "error": "...", "stderr": "..." }`
+- **Response**: `200 OK` with diagnostic report.
+
+#### 8. AI Code Review
+- **URL**: `POST /api/v1/ai/code-review`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "problemId": "...", "code": "...", "language": "javascript", "executionResult": {} }`
+- **Response**: `200 OK` with structured rubric.
+
+#### 9. Lesson Summarization
+- **URL**: `POST /api/v1/ai/summarize`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "lessonId": "..." }`
+- **Response**: `200 OK` with technical summary, key definitions, and interview questions.
+
+#### 10. Personalized Study Plan
+- **URL**: `POST /api/v1/ai/study-plan`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "targetSkill": "Full Stack", "availableHours": 10, "targetDate": "4 weeks", "currentLevel": "Intermediate" }`
+- **Response**: `200 OK` with structured schedule.
+
+#### 11. Practice Question Generation
+- **URL**: `POST /api/v1/ai/generate-practice`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "topic": "React Hooks", "difficulty": "MEDIUM", "count": 3 }`
+- **Response**: `200 OK` with generated practice questions.
+
+#### 12. Message Feedback
+- **URL**: `POST /api/v1/ai/messages/:messageId/feedback`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "rating": "HELPFUL" | "UNHELPFUL", "reason": "..." }`
+- **Response**: `200 OK`
+

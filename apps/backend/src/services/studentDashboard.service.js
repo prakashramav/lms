@@ -270,6 +270,25 @@ const getStudentDashboardData = async (userId) => {
       // Non-fatal telemetry fallback
     }
 
+    // AI Tutor contextual insight
+    let aiTutorInsight = {
+      recommendedTopic: currentCourse ? `${currentCourse.title} - ${currentCourse.currentLesson}` : 'JavaScript Fundamentals',
+      prompt: currentCourse ? `Ask AI Tutor to explain ${currentCourse.currentLesson}` : 'Ask AI Tutor to recommend a personalized study plan',
+      hasRecentChat: false,
+    };
+
+    try {
+      const { AIConversation } = require('../models/aiConversation.model');
+      const latestChat = await AIConversation.findOne({ studentId: userId }).sort({ updatedAt: -1 }).lean();
+      if (latestChat) {
+        aiTutorInsight.hasRecentChat = true;
+        aiTutorInsight.lastConversationId = latestChat._id;
+        aiTutorInsight.lastConversationTitle = latestChat.title;
+      }
+    } catch {
+      // Non-fatal fallback
+    }
+
     return {
       student: {
         id: user._id,
@@ -291,6 +310,7 @@ const getStudentDashboardData = async (userId) => {
       recentAssessment,
       inProgressAssessment,
       codingProgress,
+      aiTutorInsight,
     };
 };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Play,
   Pause,
@@ -369,6 +370,15 @@ export default function LessonPlayer({
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href={`/ai-tutor?courseId=${lesson.courseId}&lessonId=${lesson._id}`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition shadow-xs"
+            title="Open AI Tutor with this lesson context"
+          >
+            <Sparkles className="w-4 h-4 text-violet-500" />
+            <span>Ask AI Tutor</span>
+          </Link>
+
           {onMarkComplete && (
             <button
               type="button"

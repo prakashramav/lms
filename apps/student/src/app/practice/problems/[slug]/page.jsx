@@ -7,7 +7,11 @@ import StudentLayout from '@/components/layout/StudentLayout';
 import CodeEditor from '@/components/practice/CodeEditor';
 import PreviewFrame from '@/components/practice/PreviewFrame';
 import TestPanel from '@/components/practice/TestPanel';
+import { useAuth } from '@/context/AuthContext';
 import { practiceService } from '@/services/practiceService';
+import { aiService } from '@/services/aiService';
+import AIHintCard from '@/components/ai/AIHintCard';
+import CodeReviewModal from '@/components/ai/CodeReviewModal';
 import {
   ChevronLeft,
   CheckCircle2,
@@ -20,6 +24,8 @@ import {
   AlertCircle,
   HelpCircle,
   ExternalLink,
+  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 
 export default function ProblemWorkspacePage() {
@@ -37,6 +43,56 @@ export default function ProblemWorkspacePage() {
   const [customInput, setCustomInput] = useState('');
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'saving' | 'error'
   const [isBookmarked, setIsBookmarked] = useState(false);
+
+  // Auth & AI Assistant states
+  const { accessToken } = useAuth();
+  const [showHintModal, setShowHintModal] = useState(false);
+  const [hintTier, setHintTier] = useState(1);
+  const [hintText, setHintText] = useState('');
+  const [hintLoading, setHintLoading] = useState(false);
+
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const handleFetchHint = async (tier = 1) => {
+    if (!problem?._id) return;
+    try {
+      setHintLoading(true);
+      setHintTier(tier);
+      setShowHintModal(true);
+      const res = await aiService.getHint(accessToken, {
+        problemId: problem._id,
+        tier,
+        currentCode: code,
+        language,
+      });
+      setHintText(res.data?.hint || '');
+    } catch {
+      setHintText('Failed to load AI hint. Please try again.');
+    } finally {
+      setHintLoading(false);
+    }
+  };
+
+  const handleOpenReview = async () => {
+    if (!problem?._id) return;
+    try {
+      setReviewLoading(true);
+      setShowReviewModal(true);
+      const res = await aiService.reviewCode(accessToken, {
+        problemId: problem._id,
+        code,
+        language,
+        executionResult: runResult || submissionResult,
+      });
+      setReviewText(res.data?.review || '');
+    } catch {
+      setReviewText('Failed to generate AI code review. Please try again.');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   // Execution state
   const [isRunning, setIsRunning] = useState(false);
@@ -270,6 +326,35 @@ export default function ProblemWorkspacePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleFetchHint(1)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100 transition-colors shadow-2xs"
+              title="Get Pedagogical Hint"
+            >
+              <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Get Hint</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenReview}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/80 hover:bg-violet-100 transition-colors shadow-2xs"
+              title="AI Code Review"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+              <span className="hidden sm:inline">Review Code</span>
+            </button>
+
+            <Link
+              href={`/ai-tutor?problemId=${problem._id}`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 transition-colors shadow-2xs"
+              title="Open AI Tutor with this problem"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+              <span>Ask AI</span>
+            </Link>
+
             <button
               onClick={handleToggleBookmark}
               title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Problem'}
@@ -522,6 +607,37 @@ export default function ProblemWorkspacePage() {
             </div>
           </div>
         </div>
+
+        {/* AI Hint Modal */}
+        {showHintModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="relative w-full max-w-lg">
+              <AIHintCard
+                problemId={problem._id}
+                currentTier={hintTier}
+                hintText={hintText}
+                loading={hintLoading}
+                onFetchHint={handleFetchHint}
+              />
+              <button
+                type="button"
+                onClick={() => setShowHintModal(false)}
+                className="mt-2 w-full py-2 text-center text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                Close Hint
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI Code Review Modal */}
+        <CodeReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          reviewText={reviewText}
+          problemTitle={problem.title}
+          loading={reviewLoading}
+        />
       </div>
     </StudentLayout>
   );

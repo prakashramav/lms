@@ -18,6 +18,7 @@ import RecentActivityCard from '../../components/dashboard/RecentActivityCard';
 import CareerReadinessCard from '../../components/dashboard/CareerReadinessCard';
 import RecentAssessmentCard from '../../components/dashboard/RecentAssessmentCard';
 import CodingProgressCard from '../../components/dashboard/CodingProgressCard';
+import AITutorCard from '../../components/dashboard/AITutorCard';
 import DashboardSkeleton from '../../components/dashboard/DashboardSkeleton';
 
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
@@ -121,6 +122,9 @@ export default function StudentDashboardPage() {
 
                 {/* Learning Consistency Streak */}
                 <StreakCard streak={data.streak} />
+
+                {/* AI Tutor Contextual Recommendation Widget */}
+                <AITutorCard aiTutorInsight={data.aiTutorInsight} />
 
                 {/* Recent or Active Assessment */}
                 <RecentAssessmentCard
