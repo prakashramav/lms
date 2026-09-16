@@ -6,6 +6,8 @@ const { Enrollment } = require('../models/enrollment.model');
 const Progress = require('../models/progress.model');
 const Assessment = require('../models/assessment.model');
 const AssessmentAttempt = require('../models/assessmentAttempt.model');
+const { Problem } = require('../models/problem.model');
+const { Submission } = require('../models/submission.model');
 
 /**
  * Generates personalized student dashboard payload based on authenticated user and real course progress
@@ -235,27 +237,61 @@ const getStudentDashboardData = async (userId) => {
     // Non-fatal telemetry fallback
   }
 
-  return {
-    student: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      targetRole: career.targetRole,
-      avatar: user.avatar,
-    },
-    currentCourse,
-    progress,
-    dailyGoal,
-    streak,
-    pendingTasks,
-    recentActivity,
-    recommendations,
-    career,
-    recentAssessment,
-    inProgressAssessment,
+  let codingProgress = {
+    solvedCount: 0,
+    totalProblems: 0,
+    recentSubmission: null,
   };
+
+    try {
+      const [acceptedIds, totalProblemsCount, latestSub] = await Promise.all([
+        Submission.find({ studentId: userId, verdict: 'ACCEPTED' }).distinct('problemId'),
+        Problem.countDocuments({ isPublished: true }),
+        Submission.findOne({ studentId: userId })
+          .sort({ submittedAt: -1 })
+          .populate('problemId', 'title slug difficulty'),
+      ]);
+
+      codingProgress = {
+        solvedCount: acceptedIds.length,
+        totalProblems: totalProblemsCount,
+        recentSubmission: latestSub
+          ? {
+              id: latestSub._id,
+              problemTitle: latestSub.problemId?.title || 'Coding Problem',
+              problemSlug: latestSub.problemId?.slug,
+              verdict: latestSub.verdict,
+              language: latestSub.language,
+              submittedAt: latestSub.submittedAt,
+            }
+          : null,
+      };
+    } catch {
+      // Non-fatal telemetry fallback
+    }
+
+    return {
+      student: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        targetRole: career.targetRole,
+        avatar: user.avatar,
+      },
+      currentCourse,
+      progress,
+      dailyGoal,
+      streak,
+      pendingTasks,
+      recentActivity,
+      recommendations,
+      career,
+      recentAssessment,
+      inProgressAssessment,
+      codingProgress,
+    };
 };
 
 module.exports = {

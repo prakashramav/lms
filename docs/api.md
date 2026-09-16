@@ -276,3 +276,65 @@ Base URL: `/api/v1`
 - **Query Parameters**: `page`, `limit`
 - **Response**: `200 OK` with paginated list of student's completed attempts sorted newest first.
 
+---
+
+### Practice & Online Judge (`/api/v1/practice`)
+
+#### 1. List Supported Languages
+- **URL**: `GET /api/v1/practice/languages`
+- **Access**: Public
+- **Response**: `200 OK` with list of currently available languages and execution runtimes.
+
+#### 2. Get Problem Catalog
+- **URL**: `GET /api/v1/practice/problems`
+- **Access**: Public / Optional Auth (attaches `isSolved` and `isBookmarked` if authenticated)
+- **Query Parameters**: `category`, `difficulty`, `language`, `topic`, `status`, `search`, `sort`, `page`, `limit`
+- **Response**: `200 OK` with paginated list of published coding problems.
+
+#### 3. Get Problem Details
+- **URL**: `GET /api/v1/practice/problems/:slug`
+- **Access**: Public / Optional Auth
+- **Security**: Hidden test cases are strictly omitted from response.
+- **Response**: `200 OK` with problem description, examples, constraints, hints, and public test cases.
+
+#### 4. Run Code (Public / Custom Tests)
+- **URL**: `POST /api/v1/practice/problems/:problemId/run`
+- **Access**: Public / Optional Auth (Rate limited: 30 runs/min)
+- **Body**: `{ "language": "javascript", "code": "...", "customInput": "..." }`
+- **Response**: `200 OK` with verdict, testResults, stdout, stderr, executionTime, and memoryUsed.
+
+#### 5. Submit Code (Full Hidden Test Evaluation)
+- **URL**: `POST /api/v1/practice/problems/:problemId/submit`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Role Requirement**: `STUDENT` (Rate limited: 15 submissions/min)
+- **Body**: `{ "language": "javascript", "code": "..." }`
+- **Response**: `201 Created` with submissionId, verdict, score, passedTests, totalTests, and masked testResults.
+
+#### 6. Code Draft Autosave
+- **URL**: `PUT /api/v1/practice/drafts/:problemId`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Body**: `{ "language": "javascript", "code": "..." }`
+- **Response**: `200 OK`
+
+#### 7. Toggle Bookmark
+- **URL**: `POST /api/v1/practice/problems/:problemId/bookmark`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Response**: `200 OK` with `{ "isBookmarked": true / false }`
+
+#### 8. Student Submissions History
+- **URL**: `GET /api/v1/practice/submissions`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Query Parameters**: `problemId`, `language`, `verdict`, `page`, `limit`
+- **Response**: `200 OK` with paginated submission history.
+
+#### 9. Get Submission Detail
+- **URL**: `GET /api/v1/practice/submissions/:submissionId`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Security**: IDOR protected — only submission owner can access.
+- **Response**: `200 OK` with submitted code, verdict, and test case breakdown.
+
+#### 10. Student Practice Progress
+- **URL**: `GET /api/v1/practice/progress`
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Response**: `200 OK` with solved counts, coding streak, topic mastery, and difficulty breakdown.
+

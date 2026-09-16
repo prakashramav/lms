@@ -8,6 +8,7 @@ const enrollmentRoutes = require('./api/v1/enrollment.route');
 const progressRoutes = require('./api/v1/progress.route');
 const bookmarkRoutes = require('./api/v1/bookmark.route');
 const assessmentRoutes = require('./api/v1/assessment.route');
+const practiceRoutes = require('./api/v1/practice.route');
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/enrollments', enrollmentRoutes);
 router.use('/progress', progressRoutes);
 router.use('/bookmarks', bookmarkRoutes);
 router.use('/assessments', assessmentRoutes);
+router.use('/practice', practiceRoutes);
 
 module.exports = router;

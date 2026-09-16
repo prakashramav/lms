@@ -12,6 +12,7 @@ const Progress = require('../models/progress.model');
 const Assessment = require('../models/assessment.model');
 const Question = require('../models/question.model');
 const AssessmentAttempt = require('../models/assessmentAttempt.model');
+const { seedPracticeProblems } = require('./seedPracticeProblems');
 const env = require('../config/env');
 
 const seedData = async () => {
@@ -982,6 +983,9 @@ const seedData = async () => {
       ],
     });
 
+    // 8. Seed Coding Practice Problems (Phase 6)
+    await seedPracticeProblems(student, instructor);
+
     console.log('====================================================');
     console.log('       DEVELOPMENT SEED DATA GENERATED SUCCESSFULLY   ');
     console.log('====================================================');
@@ -999,10 +1003,15 @@ const seedData = async () => {
     console.log('  5. Cloud Native Security & Docker Containers [Draft] (DRAFT, 5 questions)');
     console.log('  Total questions seeded: 31');
     console.log('----------------------------------------------------');
+    console.log('CODING PRACTICE PROBLEMS SEEDED (Phase 6):');
+    console.log('  30 problems across 5 categories: JavaScript (10), HTML/CSS (6), React (6), Node.js (4), Express.js (4)');
+    console.log('  Includes public & hidden test cases, starter code, and verified test assertions.');
+    console.log('----------------------------------------------------');
     console.log('DEMO STUDENT ENROLLMENT & ASSESSMENTS:');
     console.log('  Student: student@example.com');
     console.log('  Course:  Full Stack Software Engineering (Progress: 40%)');
     console.log('  Passed Assessment: JavaScript & Web Core Assessment (86% - 6/7)');
+    console.log('  Solved Problem: Two Sum (100% Accepted)');
     console.log('====================================================');
 
     await mongoose.disconnect();

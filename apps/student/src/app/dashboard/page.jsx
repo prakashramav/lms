@@ -17,6 +17,7 @@ import PendingTasksCard from '../../components/dashboard/PendingTasksCard';
 import RecentActivityCard from '../../components/dashboard/RecentActivityCard';
 import CareerReadinessCard from '../../components/dashboard/CareerReadinessCard';
 import RecentAssessmentCard from '../../components/dashboard/RecentAssessmentCard';
+import CodingProgressCard from '../../components/dashboard/CodingProgressCard';
 import DashboardSkeleton from '../../components/dashboard/DashboardSkeleton';
 
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
@@ -126,6 +127,9 @@ export default function StudentDashboardPage() {
                   recentAssessment={data.recentAssessment}
                   inProgressAssessment={data.inProgressAssessment}
                 />
+
+                {/* Coding Practice Progress Widget */}
+                <CodingProgressCard data={data} />
 
                 {/* Pending Tasks & Deadlines */}
                 <PendingTasksCard tasks={data.pendingTasks} />
