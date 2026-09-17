@@ -179,3 +179,10 @@ npm run test:backend
 - [Database Architecture & Index Audit](docs/database.md)
 - [API v1 REST Specification](docs/api.md)
 - [OpenAPI 3.0 YAML Contract](docs/openapi.yaml)
+- [Mentorship System Architecture](docs/mentorship/mentorship-architecture.md)
+- [Event System & Lifecycle](docs/events/event-architecture.md)
+- [Community Architecture & Moderation](docs/community/community-architecture.md)
+- [Learning Marketplace Architecture](docs/marketplace/marketplace-architecture.md)
+- [Platform Ecosystem Capability Map](docs/platform/ecosystem-map.md)
+- [Phase 22 Launch Validation Report](docs/releases/phase-22-validation.md)
+

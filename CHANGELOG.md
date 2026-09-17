@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-09-18 - Phase 22 Learning Ecosystem, Marketplace, Mentorship & Advanced Community
+
+### Added
+- **Mentorship System Architecture**:
+  - `docs/mentorship/mentorship-architecture.md`: Specification of verified mentor directory, evidence-driven matching with explanations, double-booking prevention, student session requests, and private note privacy boundaries.
+- **Event System & Lifecycle**:
+  - `docs/events/event-architecture.md`: Complete event lifecycle (Workshop, Webinar, Bootcamp, Hackathon), capacity management, automated waitlist processing, timezone-aware scheduling, and idempotent reminders.
+- **Community Architecture & Moderation Pipeline**:
+  - `docs/community/community-architecture.md`: Category/channel/post hierarchy, question resolution with verified expert indicators, automated rate limiting/anti-spam, and AI-assisted moderation triage with strict human-in-the-loop review.
+- **Learning Marketplace & Server-Side Entitlements**:
+  - `docs/marketplace/marketplace-architecture.md`: Multi-product catalog, cryptographically verified payment webhook ingestion, authoritative server-side entitlements, and transparent creator earnings without fabricated metrics.
+- **Platform Capability Map**:
+  - `docs/platform/ecosystem-map.md`: Cross-domain capability mapping across Student, Instructor, Admin, Employer, and Organization portals.
+- **Phase 22 Launch Validation Report**:
+  - `docs/releases/phase-22-validation.md`: Comprehensive ecosystem validation report covering Course lifecycle, Cohorts, Mentorship, Events, Community, Certifications, Marketplace, Security, and Non-fabrication verification.
+
+---
+
 ## [1.7.0] - 2026-09-18 - Phase 21 AI Learning Intelligence, Career Copilot & Platform Automation
 
 ### Added
