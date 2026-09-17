@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-09-18 - Phase 19 Post-Launch Intelligence, Optimization & Continuous Improvement
+
+### Added
+- **Product Analytics & Event Ingestion Architecture**:
+  - `docs/analytics/analytics-architecture.md`: Standardized `v1` event schema covering Learning, Assessment, Coding, Career, Instructor, Admin, and AI Telemetry.
+  - Privacy-compliant event pipeline with deduplication safeguards and zero PII/secret logging.
+- **AI Continuous Evaluation & Safety Regression Framework**:
+  - `docs/ai/evaluation.md`: Version-controlled golden dataset evaluation framework (`aiEvaluator.js`) testing concept explanations, prompt injection defense, code debugging, and diagnostics.
+- **Safe Experimentation & Feature Flag Lifecycle**:
+  - `docs/experimentation/feature-flags.md`: Formalized feature flag governance across draft, canary, GA, and emergency kill switches.
+- **Standardized Product Metrics Dictionary**:
+  - `docs/product/metrics.md`: Normalized metrics dictionary ensuring identical definitions across Student, Instructor, and Admin reporting views.
+- **Phase 19 Launch Intelligence Validation**:
+  - `docs/releases/phase-19-validation.md`: Comprehensive post-launch intelligence report confirming zero fabricated analytics.
+
+---
+
 ## [1.4.0] - 2026-09-17 - Phase 17 Production Hardening, Security, Scalability & Launch Readiness
 
 ### Added
