@@ -8,10 +8,15 @@ const v1Routes = require('./routes/index');
 const notFound = require('./middlewares/notFound.middleware');
 const errorHandler = require('./middlewares/error.middleware');
 
+const path = require('path');
 const app = express();
 
 // Security middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Cookie parser for HTTP-only refresh tokens
 app.use(cookieParser());
@@ -36,9 +41,12 @@ if (env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing with 50mb capacity for document/resource attachments
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Static uploads directory
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/v1', v1Routes);

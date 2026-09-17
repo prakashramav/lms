@@ -96,6 +96,19 @@ const courseSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    version: {
+      type: Number,
+      default: 1,
+    },
+    publishedAt: {
+      type: Date,
+      default: null,
+    },
+    publishedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,
