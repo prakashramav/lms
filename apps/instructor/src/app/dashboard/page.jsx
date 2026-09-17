@@ -257,54 +257,57 @@ export default function InstructorDashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {data.coursePerformance.map((course) => (
-                  <div
-                    key={course.courseId}
-                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                  >
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            course.status === 'PUBLISHED'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}
-                        >
-                          {course.status}
-                        </span>
-                        <h4 className="text-sm font-bold text-white truncate">{course.title}</h4>
-                      </div>
+                {data.coursePerformance.map((course, idx) => {
+                  const targetCourseId = course.courseId || course._id || course.id;
+                  return (
+                    <div
+                      key={targetCourseId || `course-perf-${idx}`}
+                      className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              course.status === 'PUBLISHED'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}
+                          >
+                            {course.status}
+                          </span>
+                          <h4 className="text-sm font-bold text-white truncate">{course.title}</h4>
+                        </div>
 
-                      <div className="flex items-center gap-4 text-xs text-slate-400">
-                        <span>{course.modulesCount || 0} Modules</span>
-                        <span>•</span>
-                        <span>{course.lessonsCount || 0} Lessons</span>
-                        <span>•</span>
-                        <span className="text-slate-300 font-medium">
-                          {course.enrolledStudents || 0} Enrolled
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 shrink-0">
-                      <div className="text-right">
-                        <div className="text-xs text-slate-400">Avg. Completion</div>
-                        <div className="text-base font-extrabold text-white">
-                          {course.averageCompletion || 0}%
+                        <div className="flex items-center gap-4 text-xs text-slate-400">
+                          <span>{course.modulesCount || 0} Modules</span>
+                          <span>•</span>
+                          <span>{course.lessonsCount || 0} Lessons</span>
+                          <span>•</span>
+                          <span className="text-slate-300 font-medium">
+                            {course.enrolledStudents || 0} Enrolled
+                          </span>
                         </div>
                       </div>
 
-                      <Link
-                        href={`/courses/${course.courseId}/edit`}
-                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1"
-                      >
-                        <span>Studio</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                      </Link>
+                      <div className="flex items-center gap-6 shrink-0">
+                        <div className="text-right">
+                          <div className="text-xs text-slate-400">Avg. Completion</div>
+                          <div className="text-base font-extrabold text-white">
+                            {course.averageCompletion || 0}%
+                          </div>
+                        </div>
+
+                        <Link
+                          href={targetCourseId ? `/courses/${targetCourseId}/edit` : '/courses'}
+                          className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1"
+                        >
+                          <span>Studio</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

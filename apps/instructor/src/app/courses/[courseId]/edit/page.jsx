@@ -81,7 +81,7 @@ export default function CourseEditorPage() {
   });
 
   const loadCourseData = async () => {
-    if (!accessToken || !courseId) return;
+    if (!accessToken || !courseId || courseId === 'undefined') return;
     setIsLoading(true);
     try {
       const data = await fetchCourseDetail(accessToken, courseId);
@@ -111,11 +111,16 @@ export default function CourseEditorPage() {
   };
 
   useEffect(() => {
+    if (courseId === 'undefined') {
+      router.replace('/courses');
+      return;
+    }
     loadCourseData();
   }, [accessToken, courseId]);
 
   // Lazy load tab specific data
   useEffect(() => {
+    if (!courseId || courseId === 'undefined') return;
     if (activeTab === 'analytics' && !analytics && accessToken) {
       fetchCourseAnalytics(accessToken, courseId)
         .then((res) => setAnalytics(res))
@@ -216,6 +221,24 @@ export default function CourseEditorPage() {
       setIsSaving(false);
     }
   };
+
+  if (!courseId || courseId === 'undefined') {
+    return (
+      <InstructorLayout>
+        <div className="max-w-4xl mx-auto p-12 text-center text-slate-400 space-y-4">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+          <h2 className="text-xl font-bold text-white">Course Not Specified</h2>
+          <p className="text-sm text-slate-400">Invalid course identifier. Please select a course from your studio catalog.</p>
+          <Link
+            href="/courses"
+            className="inline-block px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition"
+          >
+            Back to Courses
+          </Link>
+        </div>
+      </InstructorLayout>
+    );
+  }
 
   if (isLoading) {
     return (
