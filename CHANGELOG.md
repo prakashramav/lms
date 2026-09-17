@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-09-18 - Phase 21 AI Learning Intelligence, Career Copilot & Platform Automation
+
+### Added
+- **AI Learning Intelligence Architecture**:
+  - `docs/ai/architecture.md`: Specification of modular AI layer, RAG vector retrieval pipeline, and resilient AI router with 3-strike circuit breaker.
+- **AI Safety & Privacy Guardrails**:
+  - `docs/ai/guardrails.md`: Socratic multi-tier hint disclosure, context isolation preventing cross-student data access, static code safety analysis, and transparent advisory notices.
+- **AI Career Copilot & Interview Intelligence**:
+  - `docs/career/ai-career-copilot.md`: Evidence-driven skill gap mapping, ATS resume keyword optimization, and simulated technical/behavioral mock interview scoring.
+- **Phase 21 Launch Validation Report**:
+  - `docs/releases/phase-21-validation.md`: Formal validation scorecard confirming full operational readiness across AI copilots, safe RAG, and regression test suites.
+
+---
+
 ## [1.6.0] - 2026-09-18 - Phase 20 Enterprise Scale, Integrations & Platform Extensibility
 
 ### Added
