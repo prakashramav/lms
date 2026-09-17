@@ -27,10 +27,18 @@ export async function fetchStudentDashboard(accessToken) {
     throw err;
   }
 
+  if (res.status === 403) {
+    const err = new Error('FORBIDDEN_ROLE');
+    err.status = 403;
+    throw err;
+  }
+
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.message || 'Unable to load your dashboard.');
+    const err = new Error(data.message || 'Unable to load your dashboard.');
+    err.status = res.status;
+    throw err;
   }
 
   return data.data;

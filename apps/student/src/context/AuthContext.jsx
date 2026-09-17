@@ -72,6 +72,16 @@ export function AuthProvider({ children }) {
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
 
+          // Prevent cross-portal role pollution (e.g. admin/instructor session in student app)
+          if (parsedUser.role && parsedUser.role !== 'STUDENT') {
+            localStorage.removeItem('apex_student_token');
+            localStorage.removeItem('apex_student_user');
+            localStorage.removeItem('apex_student_refresh_token');
+            setUser(null);
+            setAccessToken(null);
+            return;
+          }
+
           if (!isTokenExpired(storedToken)) {
             setAccessToken(storedToken);
             setUser(parsedUser);
