@@ -88,7 +88,7 @@ export async function enrollInCourse(courseId, accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to enroll in course');
   }
-  return json.data;
+  return json.data?.enrollment !== undefined ? json.data.enrollment : json.data;
 }
 
 /**
@@ -106,7 +106,7 @@ export async function fetchEnrollments(accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to fetch enrollments');
   }
-  return json.data;
+  return json.data?.enrollments || (Array.isArray(json.data) ? json.data : []);
 }
 
 /**
@@ -125,7 +125,7 @@ export async function fetchEnrollmentByCourse(courseId, accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to check enrollment');
   }
-  return json.data;
+  return json.data?.enrollment !== undefined ? json.data.enrollment : json.data;
 }
 
 /**
@@ -159,7 +159,7 @@ export async function startLessonProgress(lessonId, accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to start lesson');
   }
-  return json.data;
+  return json.data?.progress !== undefined ? json.data.progress : json.data;
 }
 
 /**
@@ -176,7 +176,7 @@ export async function updateLessonProgress(lessonId, { lastPosition, timeSpent }
   if (!res.ok) {
     throw new Error(json.message || 'Failed to save progress');
   }
-  return json.data;
+  return json.data?.progress !== undefined ? json.data.progress : json.data;
 }
 
 /**
@@ -192,7 +192,7 @@ export async function completeLessonProgress(lessonId, accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to mark lesson complete');
   }
-  return json.data;
+  return json.data?.progress !== undefined ? json.data.progress : json.data;
 }
 
 /**
@@ -210,7 +210,7 @@ export async function fetchBookmarks(accessToken) {
   if (!res.ok) {
     throw new Error(json.message || 'Failed to fetch bookmarks');
   }
-  return json.data;
+  return json.data?.bookmarks || (Array.isArray(json.data) ? json.data : []);
 }
 
 /**

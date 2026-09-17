@@ -60,7 +60,10 @@ export default function LearningCatalogPage() {
   useEffect(() => {
     if (accessToken) {
       fetchEnrollments(accessToken)
-        .then((data) => setEnrollments(data || []))
+        .then((data) => {
+          const list = Array.isArray(data) ? data : (data?.enrollments || []);
+          setEnrollments(list);
+        })
         .catch(() => setEnrollments([]));
     }
   }, [accessToken]);
@@ -108,8 +111,12 @@ export default function LearningCatalogPage() {
 
   // Map enrollment by courseId
   const enrollmentMap = new Map();
-  enrollments.forEach((e) => {
-    const cid = typeof e.courseId === 'object' ? e.courseId._id : e.courseId;
+  const safeEnrollments = Array.isArray(enrollments)
+    ? enrollments
+    : (enrollments?.enrollments || []);
+
+  safeEnrollments.forEach((e) => {
+    const cid = typeof e.courseId === 'object' ? e.courseId?._id : e.courseId;
     if (cid) enrollmentMap.set(cid.toString(), e);
   });
 
@@ -140,28 +147,26 @@ export default function LearningCatalogPage() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
+                  placeholder="Search by keyword, technology, or topic (e.g., React, Microservices)..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search courses, skills, technologies..."
-                  className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 focus:border-brand-400 text-white placeholder-slate-400 text-sm outline-none transition backdrop-blur-md"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 dark:bg-slate-800/60 border border-white/20 dark:border-slate-700/60 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 backdrop-blur-md text-sm"
                 />
               </div>
               <button
                 type="submit"
-                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold shadow-lg shadow-brand-600/30 transition flex-shrink-0"
+                className="px-5 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm transition-colors shadow-lg shadow-brand-500/25 shrink-0"
               >
                 Search
               </button>
             </form>
           </div>
 
-          {/* Background Decorative Accents */}
-          <div className="absolute right-0 bottom-0 top-0 w-1/3 bg-gradient-to-l from-brand-600/20 to-transparent pointer-events-none" />
           <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-500/10 blur-3xl pointer-events-none" />
         </div>
 
         {/* Continue Learning Strip if student is enrolled in courses */}
-        {enrollments.length > 0 && (
+        {safeEnrollments.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -169,12 +174,12 @@ export default function LearningCatalogPage() {
                 Enrolled Tracks
               </h2>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {enrollments.length} Active {enrollments.length === 1 ? 'Track' : 'Tracks'}
+                {safeEnrollments.length} Active {safeEnrollments.length === 1 ? 'Track' : 'Tracks'}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enrollments.slice(0, 3).map((enr) => {
+              {safeEnrollments.slice(0, 3).map((enr) => {
                 const c = enr.courseId;
                 if (!c || typeof c !== 'object') return null;
                 return <CourseCard key={enr._id} course={c} enrollment={enr} />;

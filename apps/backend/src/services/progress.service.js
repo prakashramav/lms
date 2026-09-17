@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Progress = require('../models/progress.model');
 const { Lesson } = require('../models/lesson.model');
 const { Course } = require('../models/course.model');
@@ -121,9 +122,22 @@ const completeLesson = async (studentId, lessonId) => {
  * Get student progress for a course
  */
 const getCourseProgress = async (studentId, courseId) => {
+  let targetCourseId = courseId;
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    const course = await Course.findOne({ slug: courseId }).select('_id');
+    if (!course) {
+      return {
+        enrollment: null,
+        progress: [],
+        completedLessonIds: [],
+      };
+    }
+    targetCourseId = course._id;
+  }
+
   const [enrollment, progressRecords] = await Promise.all([
-    Enrollment.findOne({ studentId, courseId }).lean(),
-    Progress.find({ studentId, courseId }).lean(),
+    Enrollment.findOne({ studentId, courseId: targetCourseId }).lean(),
+    Progress.find({ studentId, courseId: targetCourseId }).lean(),
   ]);
 
   return {
