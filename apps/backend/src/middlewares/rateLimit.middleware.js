@@ -1,19 +1,31 @@
 const rateLimit = require('express-rate-limit');
+const rateLimitConfig = require('../config/rateLimit');
 const env = require('../config/env');
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: env.NODE_ENV === 'test' ? 1000 : 100, // Limit each IP to 100 requests per window in dev/prod
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many authentication attempts from this IP. Please try again in 15 minutes.',
-    errorCode: 'TOO_MANY_REQUESTS',
-  },
-  skip: () => env.NODE_ENV === 'test',
-});
+const createLimiter = (options) => {
+  return rateLimit({
+    windowMs: options.windowMs,
+    max: options.max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: options.message,
+    skip: () => env.isTest, // Skip in test mode unless overridden
+  });
+};
+
+const generalLimiter = createLimiter(rateLimitConfig.general);
+const authLimiter = createLimiter(rateLimitConfig.auth);
+const aiLimiter = createLimiter(rateLimitConfig.ai);
+const codingLimiter = createLimiter(rateLimitConfig.coding);
+const adminLimiter = createLimiter(rateLimitConfig.admin);
+const uploadLimiter = createLimiter(rateLimitConfig.upload);
 
 module.exports = {
+  generalLimiter,
   authLimiter,
+  aiLimiter,
+  codingLimiter,
+  adminLimiter,
+  uploadLimiter,
+  createLimiter,
 };

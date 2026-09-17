@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const USER_ROLES = ['STUDENT', 'INSTRUCTOR', 'ADMIN'];
-const USER_STATUSES = ['ACTIVE', 'SUSPENDED', 'DISABLED'];
+const USER_ROLES = ['STUDENT', 'INSTRUCTOR', 'ADMIN', 'SUPER_ADMIN'];
+const USER_STATUSES = ['ACTIVE', 'SUSPENDED', 'PENDING', 'DEACTIVATED', 'DISABLED'];
 
 const userSchema = new mongoose.Schema(
   {
@@ -33,11 +33,30 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: USER_ROLES,
       default: 'STUDENT',
+      index: true,
+    },
+    permissions: {
+      type: [String],
+      default: [],
     },
     status: {
       type: String,
       enum: USER_STATUSES,
       default: 'ACTIVE',
+      index: true,
+    },
+    suspensionReason: {
+      type: String,
+      default: null,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     avatar: {
       type: String,

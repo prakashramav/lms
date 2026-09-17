@@ -1,7 +1,15 @@
 const mongoose = require('mongoose');
 
 const COURSE_DIFFICULTIES = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
-const COURSE_STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
+const COURSE_STATUSES = [
+  'DRAFT',
+  'PENDING_REVIEW',
+  'APPROVED',
+  'PUBLISHED',
+  'REJECTED',
+  'ARCHIVED',
+  'SUSPENDED',
+];
 const PRICING_TYPES = ['FREE', 'PREMIUM'];
 
 const courseSchema = new mongoose.Schema(
@@ -66,6 +74,7 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Instructor reference is required'],
+      index: true,
     },
     status: {
       type: String,
@@ -109,6 +118,27 @@ const courseSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    moderationFlags: [
+      {
+        reason: { type: String, required: true },
+        flaggedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        flaggedAt: { type: Date, default: Date.now },
+        resolved: { type: Boolean, default: false },
+      },
+    ],
   },
   {
     timestamps: true,

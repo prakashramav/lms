@@ -1,0 +1,111 @@
+name: CI / Production Quality Gate
+
+on:
+  push:
+    branches: [main, master, staging]
+  pull_request:
+    branches: [main, master, staging]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-test:
+    name: Backend Lint & Unit/Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Backend Lint Check
+        run: npm run lint --workspace=apps/backend
+
+      - name: Run Backend Test Suites
+        run: npm run test:backend
+        env:
+          NODE_ENV: test
+          PORT: 5000
+          JWT_SECRET: ci_test_secret_key_32_characters_minimum_len
+          JWT_REFRESH_SECRET: ci_test_refresh_secret_key_32_chars_min
+
+  student-build:
+    name: Student App Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Student App
+        run: npm run lint --workspace=apps/student
+
+      - name: Build Student App
+        run: npm run build --workspace=apps/student
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.com/api/v1
+
+  instructor-build:
+    name: Instructor App Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Instructor App
+        run: npm run lint --workspace=apps/instructor
+
+      - name: Build Instructor App
+        run: npm run build --workspace=apps/instructor
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.com/api/v1
+
+  admin-build:
+    name: Admin App Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Admin App
+        run: npm run lint --workspace=apps/admin
+
+      - name: Build Admin App
+        run: npm run build --workspace=apps/admin
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.com/api/v1

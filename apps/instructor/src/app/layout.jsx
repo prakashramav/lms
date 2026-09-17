@@ -4,6 +4,10 @@ import { AuthProvider } from '../context/AuthContext';
 export const metadata = {
   title: 'ApexLearn Instructor Studio | Curriculum & Pedagogy',
   description: 'Design courses, manage coding sandboxes, monitor student progress and mentor cohorts.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({ children }) {

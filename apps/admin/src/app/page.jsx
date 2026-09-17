@@ -28,8 +28,8 @@ export default function AdminHomePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
       <div className="text-center max-w-3xl mx-auto space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-purple-950/60 text-purple-300 border border-purple-800">
-          <Lock className="w-3.5 h-3.5 text-purple-400" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950/60 text-indigo-300 border border-indigo-800">
+          <Lock className="w-3.5 h-3.5 text-indigo-400" />
           Restricted Platform Administration
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
@@ -38,12 +38,18 @@ export default function AdminHomePage() {
         <p className="text-slate-400 text-lg">
           Oversee courses, manage secure sandboxes, enforce security policies, and evaluate platform telemetry.
         </p>
-        <div>
+        <div className="flex items-center justify-center gap-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/25 transition"
+          >
+            Access Dashboard <ArrowRight className="w-4 h-4" />
+          </Link>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg shadow-purple-600/25 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold border border-slate-700 transition"
           >
-            Authenticate into Console <ArrowRight className="w-4 h-4" />
+            Admin Sign In
           </Link>
         </div>
       </div>

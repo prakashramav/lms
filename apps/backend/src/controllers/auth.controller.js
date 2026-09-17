@@ -80,12 +80,19 @@ const login = async (req, res, next) => {
     }
 
     // Cross-application protection: verify expected role if specified by frontend portal
-    if (expectedRole && user.role !== expectedRole) {
-      return res.status(403).json({
-        success: false,
-        message: `Access denied. Your account (${user.role}) is not authorized to sign into the ${expectedRole} portal.`,
-        errorCode: 'ROLE_MISMATCH',
-      });
+    if (expectedRole) {
+      const isAuthorized =
+        expectedRole === 'ADMIN'
+          ? ['ADMIN', 'SUPER_ADMIN'].includes(user.role)
+          : user.role === expectedRole;
+
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. Your account (${user.role}) is not authorized to sign into the ${expectedRole} portal.`,
+          errorCode: 'ROLE_MISMATCH',
+        });
+      }
     }
 
     // Update last login
