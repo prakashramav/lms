@@ -82,13 +82,20 @@ app.use(sanitizeInput);
 // 8. Mass Assignment Protection
 app.use(protectMassAssignment);
 
+const idempotencyMiddleware = require('./middlewares/idempotency.middleware');
+const observability = require('./services/observability/observability.service');
+
 // 9. Root Health & Readiness Probes (for load balancers & orchestrators)
 app.get('/health', getHealth);
 app.get('/ready', getReadiness);
 app.get('/live', getLiveness);
+app.get('/metrics', (req, res) => {
+  res.status(200).json({ success: true, metrics: observability.getSnapshot() });
+});
 
-// 10. General API Rate Limiting
+// 10. General API Rate Limiting & Idempotency Key Handling
 app.use('/api', generalLimiter);
+app.use('/api', idempotencyMiddleware);
 
 // 11. Tiered Route Rate Limiters
 app.use('/api/v1/auth', authLimiter);

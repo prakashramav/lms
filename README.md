@@ -52,12 +52,13 @@ A production-ready full-stack education platform built with modern web architect
 ## 3. Technology Stack
 
 - **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS, Monaco Code Editor, Lucide Icons
-- **Backend API**: Node.js, Express.js 4, Mongoose 8 ODM
-- **Database**: MongoDB (Replica set support, compound indexes, connection pooling)
-- **Cache & Queue**: Redis (TTL-based catalog caching and execution queue)
+- **Backend API**: Node.js, Express.js 4, Mongoose 8 ODM, REST API v1
+- **Database**: MongoDB (Replica set support, compound indexes, connection pooling max 50)
+- **Cache & Queue**: Redis + in-memory background job queue with Dead Letter Queue (DLQ) and bounded exponential retries
 - **Execution Sandbox**: Judge0 / Isolated container runner with CPU & memory caps
-- **AI Tutoring**: Google Gemini (`gemini-1.5-flash`), OpenAI, with intelligent deterministic mock fallback
-- **Security**: Helmet, bcrypt (10 salt rounds), JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment protection, tiered rate limiters
+- **Resilient AI Router**: Multi-provider fallback (Gemini / OpenAI / Mock), 3-strike circuit breaker, request caching, and tier quotas
+- **Security & Reliability**: Helmet, bcrypt, JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment defense, Idempotency middleware, Resource-level IDOR validation, tiered rate limiters
+- **Observability**: Request ID propagation, structured JSON logs, `/metrics` latency & error telemetry, automated backup & restore disaster recovery tools
 
 ---
 

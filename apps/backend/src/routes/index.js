@@ -22,6 +22,7 @@ const supportRoutes = require('./api/v1/support.route');
 const showcaseRoutes = require('./api/v1/showcase.route');
 const feedbackRoutes = require('./api/v1/feedback.route');
 const searchRoutes = require('./api/v1/search.route');
+const queueRoutes = require('./api/v1/queue.route');
 
 const router = express.Router();
 
@@ -48,6 +49,7 @@ router.use('/support', supportRoutes);
 router.use('/showcase', showcaseRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/search', searchRoutes);
+router.use('/queue', queueRoutes);
 
 module.exports = router;
 

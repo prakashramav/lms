@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-17 - Phase 15 Production Scale, Advanced AI & Reliability
+
+### Added
+- **API Reliability & Idempotency**:
+  - Standardized error envelopes with `{ success: false, error: { code, message, details } }`.
+  - `idempotency.middleware.js`: Deduplication and caching of state-mutating requests via `Idempotency-Key`.
+  - Global `GET /metrics` telemetry endpoint tracking latency percentiles, error rates, and queue health.
+- **Background Job Queue & Dead Letter Queue (DLQ)**:
+  - `jobQueue.js`: Asynchronous job execution with states (`QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED`, `RETRYING`, `CANCELLED`).
+  - Bounded exponential retries (max 3) with Dead Letter Queue preservation and admin triage routes (`/api/v1/queue/status`, `/api/v1/queue/dlq/:jobId/retry`, `/api/v1/queue/jobs/:jobId/cancel`).
+- **Resilient AI Router & Circuit Breaker**:
+  - `aiRouter.js`: Multi-provider fallback chain (Primary -> Secondary -> Resilient Mock).
+  - 3-strike circuit breaker with cooldown timer to prevent cascading failures.
+  - Deterministic prompt request caching and tiered quota rate enforcement.
+  - `aiEvaluator.js`: Golden dataset evaluation and prompt injection safety regression suite.
+- **Resource-Level Authorization & IDOR Hardening**:
+  - `resourceAuth.middleware.js`: Granular verification of resource ownership preventing cross-user, cross-course, and cross-organization tampering.
+  - `Organization` model supporting multi-tenant institutional and employer teams with role-based memberships.
+- **Automated Disaster Recovery & Backups**:
+  - `scripts/backup.js`: Checksum-verified JSON snapshot generator for core database collections.
+  - `scripts/restore.js`: Automated restoration engine with round-trip verification tested.
+
 ## [1.1.0] - 2026-09-17 - Phase 14 Advanced Intelligence, Personalization & Ecosystem
 
 ### Added

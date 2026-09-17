@@ -34,6 +34,8 @@ coverage/
 scratch/
 tmp/
 temp/
+backups/
+apps/backend/backups/
 
 # OS Files
 .DS_Store
