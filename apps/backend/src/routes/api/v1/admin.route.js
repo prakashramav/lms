@@ -129,5 +129,14 @@ router.patch('/career/reports/:reportId', careerController.adminReviewJobReport)
 router.post('/career/paths', careerController.createCareerPath);
 router.patch('/career/paths/:careerPathId', careerController.updateCareerPath);
 
+// ==========================================
+// 13. PHASE 16: DATA QUALITY DASHBOARD & REPAIR
+// ==========================================
+const dataQualityController = require('../../../controllers/dataQuality.controller');
+router.get('/data-quality/scan', requirePermission('settings.manage'), dataQualityController.scanDataQuality);
+router.post('/data-quality/preview', requirePermission('settings.manage'), dataQualityController.previewDataRepair);
+router.post('/data-quality/repair', requirePermission('settings.manage'), dataQualityController.executeDataRepair);
+
 module.exports = router;
+
 

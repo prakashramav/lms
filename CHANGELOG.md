@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-09-17 - Phase 16 Advanced Learning Intelligence & Ecosystem
+
+### Added
+- **Structured Knowledge Profile & Skill Evidence Graph**:
+  - Distinguishes observed, inferred, and self-reported skills with confidence calculation (`HIGH`, `MEDIUM`, `LOW`).
+  - Evidence subdocuments tracking verified assessments, coding practice, and deployed projects.
+- **Skill Dependency & Prerequisite Gap Engine**:
+  - Recursive prerequisite chain traversal pinpointing root gaps when students struggle.
+  - Transparent remediation guidance with recommended actions.
+- **Adaptive Diagnostic Assessment**:
+  - 5-question dynamic testing adjusting across 3 difficulty tiers with instant explanations.
+  - Diagnostic report compiling strong skills, developing areas, gaps, and tailored curriculum.
+- **Spaced Repetition & Mistake Bank**:
+  - Configurable review intervals (`Day 1, 3, 7, 14, 30`) with active recall prompts.
+  - Mistake bank categorization (`CONCEPT`, `SYNTAX`, `LOGIC`, `CARELESS`, `KNOWLEDGE_GAP`) and repeated error pattern clustering.
+- **AI Tutor 2.0 & Unified Tool Registry**:
+  - Socratic dialogue mode and Teach-back comprehension analysis.
+  - 4-tier progressive hint disclosure and safe multi-language code explanation.
+  - Backend-authorized AI Tool Registry enforcing strict tenant and context isolation.
+- **Project Progression & Institutional Cohorts**:
+  - 8-stage project progression with repository verification and live URL health checks.
+  - Institutional cohorts management with completion velocity and drop-off risk detection.
+  - Platform Data Quality scanner and audited repair engine with confirmation token protection.
+
+---
+
 ## [1.2.0] - 2026-09-17 - Phase 15 Production Scale, Advanced AI & Reliability
 
 ### Added

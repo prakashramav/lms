@@ -44,10 +44,61 @@ const skillSchema = new mongoose.Schema(
       enum: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
       default: 'BEGINNER',
     },
+    diagnosticTier: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 3,
+    },
+    careerTracks: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
   },
   {
     timestamps: true,
   }
+);
+
+const evidenceItemSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: [
+        'ASSESSMENT',
+        'PROJECT',
+        'CODE_PRACTICE',
+        'INSTRUCTOR_EVALUATION',
+        'CERTIFICATION',
+        'SELF_REPORTED',
+      ],
+      required: true,
+    },
+    provenance: {
+      type: String,
+      enum: ['OBSERVED', 'INFERRED', 'SELF_REPORTED'],
+      default: 'OBSERVED',
+    },
+    referenceId: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    score: {
+      type: Number,
+      default: 0,
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+    verifiedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
 );
 
 const studentSkillSchema = new mongoose.Schema(
@@ -69,6 +120,21 @@ const studentSkillSchema = new mongoose.Schema(
       enum: MASTERY_LEVELS,
       default: 'NOT_STARTED',
       index: true,
+    },
+    confidence: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH'],
+      default: 'LOW',
+    },
+    confidenceScore: {
+      type: Number,
+      default: 0.1,
+      min: 0,
+      max: 1.0,
+    },
+    evidence: {
+      type: [evidenceItemSchema],
+      default: [],
     },
     // Phase 14: Distinct mastery dimensions
     observedScore: {
@@ -111,6 +177,10 @@ const studentSkillSchema = new mongoose.Schema(
     lastPracticedAt: {
       type: Date,
       default: null,
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now,
     },
   },
   {

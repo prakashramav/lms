@@ -188,6 +188,19 @@ class AIRouter {
     }
   }
 
+  async chat(messages = [], options = {}) {
+    const systemMessage = messages.find((m) => m.role === 'system');
+    const userMessages = messages.filter((m) => m.role === 'user');
+    const prompt = userMessages.map((m) => m.content).join('\n\n');
+    return await this.execute({
+      prompt,
+      systemInstruction: systemMessage?.content || '',
+      userId: options.userId,
+      tier: options.tier || 'STANDARD',
+      isDeterministic: options.isDeterministic || false,
+    });
+  }
+
   getCircuitStatus() {
     return this.circuitBreaker.getStatus();
   }

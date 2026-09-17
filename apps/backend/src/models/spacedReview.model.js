@@ -47,6 +47,30 @@ const spacedReviewSchema = new mongoose.Schema(
       type: Number,
       default: 1, // 1 -> 3 -> 7 -> 14 -> 30 days
     },
+    intervalSequence: {
+      type: [Number],
+      default: [1, 3, 7, 14, 30],
+    },
+    consecutiveSuccesses: {
+      type: Number,
+      default: 0,
+    },
+    recallQuestion: {
+      type: String,
+      default: '',
+    },
+    recallAnswer: {
+      type: String,
+      default: '',
+    },
+    flashcardFront: {
+      type: String,
+      default: '',
+    },
+    flashcardBack: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['DUE', 'REVIEWED', 'MASTERED'],

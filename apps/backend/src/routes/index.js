@@ -24,6 +24,12 @@ const feedbackRoutes = require('./api/v1/feedback.route');
 const searchRoutes = require('./api/v1/search.route');
 const queueRoutes = require('./api/v1/queue.route');
 
+// Phase 16: Learning Intelligence & Ecosystem Routes
+const learningIntelligenceRoutes = require('./api/v1/learningIntelligence.route');
+const diagnosticRoutes = require('./api/v1/diagnostic.route');
+const spacedReviewRoutes = require('./api/v1/spacedReview.route');
+const cohortRoutes = require('./api/v1/cohort.route');
+
 const router = express.Router();
 
 router.use('/health', healthRoutes);
@@ -50,6 +56,12 @@ router.use('/showcase', showcaseRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/search', searchRoutes);
 router.use('/queue', queueRoutes);
+
+// Phase 16
+router.use('/learning-intelligence', learningIntelligenceRoutes);
+router.use('/diagnostic', diagnosticRoutes);
+router.use('/spaced-review', spacedReviewRoutes);
+router.use('/cohorts', cohortRoutes);
 
 module.exports = router;
 

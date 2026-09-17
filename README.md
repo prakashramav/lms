@@ -56,9 +56,10 @@ A production-ready full-stack education platform built with modern web architect
 - **Database**: MongoDB (Replica set support, compound indexes, connection pooling max 50)
 - **Cache & Queue**: Redis + in-memory background job queue with Dead Letter Queue (DLQ) and bounded exponential retries
 - **Execution Sandbox**: Judge0 / Isolated container runner with CPU & memory caps
-- **Resilient AI Router**: Multi-provider fallback (Gemini / OpenAI / Mock), 3-strike circuit breaker, request caching, and tier quotas
-- **Security & Reliability**: Helmet, bcrypt, JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment defense, Idempotency middleware, Resource-level IDOR validation, tiered rate limiters
-- **Observability**: Request ID propagation, structured JSON logs, `/metrics` latency & error telemetry, automated backup & restore disaster recovery tools
+- **Resilient AI Router & AI Tutor 2.0**: Multi-provider fallback (Gemini / OpenAI / Mock), 3-strike circuit breaker, Socratic dialogue, Teach-back evaluation, and progressive hints
+- **Learning Intelligence Engine**: Structured knowledge profiles with multi-modal evidence, prerequisite gap analysis, adaptive diagnostic testing, spaced review, and mistake clustering
+- **Security & Reliability**: Helmet, bcrypt, JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment defense, Idempotency middleware, Resource-level IDOR validation, tiered rate limiters, and audited data repair
+- **Observability & Institutional Governance**: Request ID propagation, `/metrics` telemetry, automated backup & restore disaster recovery, student cohort tracking, and data quality integrity scanners
 
 ---
 

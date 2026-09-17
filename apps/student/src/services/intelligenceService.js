@@ -184,3 +184,113 @@ export async function updateLearningSettings(token, settings) {
   });
   return handleResponse(res);
 }
+
+// ====================================================
+// PHASE 16: LEARNING INTELLIGENCE & ECOSYSTEM SERVICES
+// ====================================================
+
+export async function fetchKnowledgeProfile(token) {
+  const res = await fetch(`${API_BASE_URL}/learning-intelligence/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function fetchPrerequisiteGaps(token, skillSlug) {
+  const res = await fetch(`${API_BASE_URL}/learning-intelligence/dependencies/${skillSlug}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function fetchPersonalizedRoadmap(token) {
+  const res = await fetch(`${API_BASE_URL}/learning-intelligence/roadmap`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function fetchDailyLearningPlan(token, minutes = 60) {
+  const res = await fetch(`${API_BASE_URL}/learning-intelligence/daily-plan?minutes=${minutes}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function startAdaptiveDiagnostic(token, track = 'FULLSTACK') {
+  const res = await fetch(`${API_BASE_URL}/diagnostic/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ track }),
+  });
+  return handleResponse(res);
+}
+
+export async function submitAdaptiveDiagnosticAnswer(token, { attemptId, questionId, selectedAnswer }) {
+  const res = await fetch(`${API_BASE_URL}/diagnostic/submit-answer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ attemptId, questionId, selectedAnswer }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchSpacedReviewsDue(token) {
+  const res = await fetch(`${API_BASE_URL}/spaced-review/due`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function recordSpacedReviewAttempt(token, { reviewId, wasSuccessful, recallScore }) {
+  const res = await fetch(`${API_BASE_URL}/spaced-review/attempt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reviewId, wasSuccessful, recallScore }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchCategorizedMistakes(token, params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE_URL}/spaced-review/mistakes?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function resolveStudentMistake(token, mistakeId) {
+  const res = await fetch(`${API_BASE_URL}/spaced-review/mistakes/${mistakeId}/resolve`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function requestSocraticTutor(token, { concept, studentQuestion, currentContext }) {
+  const res = await fetch(`${API_BASE_URL}/ai/tutor/socratic`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ concept, studentQuestion, currentContext }),
+  });
+  return handleResponse(res);
+}
+
+export async function submitTeachBack(token, { concept, studentExplanation, targetLevel }) {
+  const res = await fetch(`${API_BASE_URL}/ai/tutor/teach-back`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ concept, studentExplanation, targetLevel }),
+  });
+  return handleResponse(res);
+}
+
+export async function requestProgressiveHint(token, { problemTitle, problemDescription, hintTier, studentCode }) {
+  const res = await fetch(`${API_BASE_URL}/ai/tutor/progressive-hint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ problemTitle, problemDescription, hintTier, studentCode }),
+  });
+  return handleResponse(res);
+}
+
