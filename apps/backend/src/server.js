@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const connectDB = require('./config/db');
 const app = require('./app');
 const env = require('./config/env');
 const { seedIntelligenceBasics } = require('./services/intelligence/intelligenceSeed');

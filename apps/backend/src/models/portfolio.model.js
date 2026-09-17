@@ -99,6 +99,8 @@ const portfolioSchema = new mongoose.Schema(
   }
 );
 
+portfolioSchema.index({ visibility: 1, updatedAt: -1 });
+
 const Portfolio = mongoose.models.Portfolio || mongoose.model('Portfolio', portfolioSchema);
 
 module.exports = Portfolio;

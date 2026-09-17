@@ -72,6 +72,8 @@ const interviewSessionSchema = new mongoose.Schema(
   }
 );
 
+interviewSessionSchema.index({ studentId: 1, status: 1, createdAt: -1 });
+
 const InterviewSession = mongoose.models.InterviewSession || mongoose.model('InterviewSession', interviewSessionSchema);
 
 module.exports = InterviewSession;

@@ -1,0 +1,36 @@
+# Docker Build Context Ignore
+# Phase 13 — Small Build Context & Secret Prevention
+
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Git and OS metadata
+.git
+.gitignore
+.github
+.DS_Store
+Thumbs.db
+
+# Environment variables & secrets (Never include in images)
+.env
+.env.*
+!.env.example
+
+# Frontend build outputs and apps
+apps/student/.next
+apps/instructor/.next
+apps/admin/.next
+apps/student/node_modules
+apps/instructor/node_modules
+apps/admin/node_modules
+
+# Tests, logs, and coverage
+coverage/
+tests/
+scratch/
+tmp/
+temp/
+*.log

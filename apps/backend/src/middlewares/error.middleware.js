@@ -61,8 +61,10 @@ const errorHandler = (err, req, res, next) => {
   if (env.isProduction && statusCode === 500) {
     return res.status(500).json({
       success: false,
+      error: 'Something went wrong.',
       message: 'Something went wrong.',
       errorCode: 'INTERNAL_SERVER_ERROR',
+      code: 'INTERNAL_ERROR',
       requestId,
     });
   }
@@ -70,8 +72,10 @@ const errorHandler = (err, req, res, next) => {
   // Standard JSON response
   res.status(statusCode).json({
     success: false,
+    error: message,
     message,
     errorCode,
+    code: errorCode,
     requestId,
     ...(env.isDevelopment && { stack: err.stack }),
   });
