@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StudentLayout from '../../../components/layout/StudentLayout';
@@ -31,7 +31,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-export default function LearningEnvironmentPage() {
+function LearningEnvironmentContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -478,5 +478,22 @@ export default function LearningEnvironmentPage() {
         )}
       </div>
     </StudentLayout>
+  );
+}
+
+export default function LearningEnvironmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+          <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
+            <Sparkles className="w-5 h-5 text-brand-500 animate-spin" />
+            <span>Loading learning environment...</span>
+          </div>
+        </div>
+      }
+    >
+      <LearningEnvironmentContent />
+    </Suspense>
   );
 }

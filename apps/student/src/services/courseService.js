@@ -57,7 +57,7 @@ export async function fetchCourseBySlug(slug, accessToken) {
  * Fetch complete curriculum modules & lessons for a course
  */
 export async function fetchCourseCurriculum(courseId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/courses/${courseId}/modules`, {
+  const res = await fetch(`${API_BASE_URL}/courses/${courseId}/curriculum`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',

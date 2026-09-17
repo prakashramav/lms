@@ -12,7 +12,8 @@ const router = express.Router();
 router.get('/', getCoursesList);
 router.get('/:slug', getCourseDetails);
 
-// Learning player curriculum requires authentication
-router.get('/:courseId/curriculum', authenticate, getCurriculum);
+// Learning player curriculum routes (supports both /curriculum and /modules)
+router.get('/:courseId/curriculum', getCurriculum);
+router.get('/:courseId/modules', getCurriculum);
 
 module.exports = router;

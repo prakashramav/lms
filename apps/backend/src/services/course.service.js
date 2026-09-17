@@ -193,15 +193,23 @@ const getCourseBySlug = async (slug, user = null) => {
  * Get full curriculum and lesson player payload for active learning environment
  */
 const getCourseCurriculum = async (courseId, user) => {
-  const course = await Course.findById(courseId).lean();
+  let course;
+  if (mongoose.Types.ObjectId.isValid(courseId)) {
+    course = await Course.findById(courseId).lean();
+  }
+  if (!course) {
+    course = await Course.findOne({ slug: courseId }).lean();
+  }
   if (!course || !course.isPublished) {
     throw new Error('COURSE_NOT_FOUND');
   }
 
-  const enrollment = await Enrollment.findOne({
-    studentId: user._id,
-    courseId: course._id,
-  }).lean();
+  const enrollment = user?._id
+    ? await Enrollment.findOne({
+        studentId: user._id,
+        courseId: course._id,
+      }).lean()
+    : null;
 
   const isEnrolled = !!enrollment;
 
@@ -216,7 +224,7 @@ const getCourseCurriculum = async (courseId, user) => {
 
   // Progress map
   let userProgressMap = {};
-  if (isEnrolled) {
+  if (isEnrolled && user?._id) {
     const progressRecords = await Progress.find({
       studentId: user._id,
       courseId: course._id,
@@ -237,6 +245,7 @@ const getCourseCurriculum = async (courseId, user) => {
 
         return {
           _id: l._id,
+          courseId: l.courseId || course._id,
           moduleId: l.moduleId,
           title: l.title,
           slug: l.slug,

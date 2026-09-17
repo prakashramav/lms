@@ -72,7 +72,8 @@ const getCourseDetails = async (req, res, next) => {
  */
 const getCurriculum = async (req, res, next) => {
   try {
-    const result = await courseService.getCourseCurriculum(req.params.courseId, req.user);
+    const user = req.user || (await extractOptionalUser(req));
+    const result = await courseService.getCourseCurriculum(req.params.courseId, user);
 
     res.status(200).json({
       success: true,
