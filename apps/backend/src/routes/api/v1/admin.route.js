@@ -118,4 +118,16 @@ router.post('/admins', requireSuperAdmin, adminController.createAdmin);
 router.patch('/admins/:adminId', requireSuperAdmin, adminController.updateAdminPermissions);
 router.post('/admins/:adminId/disable', requireSuperAdmin, adminController.disableAdmin);
 
+// ==========================================
+// 12. PHASE 12: CAREER & PLACEMENT MANAGEMENT
+// ==========================================
+const careerController = require('../../../controllers/career.controller');
+router.get('/career/analytics', careerController.getAdminPlacementAnalytics);
+router.patch('/career/jobs/:jobId/status', careerController.adminUpdateJobStatus);
+router.get('/career/reports', careerController.getJobReports);
+router.patch('/career/reports/:reportId', careerController.adminReviewJobReport);
+router.post('/career/paths', careerController.createCareerPath);
+router.patch('/career/paths/:careerPathId', careerController.updateCareerPath);
+
 module.exports = router;
+

@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const app = require('./app');
 const env = require('./config/env');
-const connectDB = require('./config/db');
 const { seedIntelligenceBasics } = require('./services/intelligence/intelligenceSeed');
+const { seedCareerEcosystem } = require('./services/career/careerSeed');
 
 const startServer = async () => {
   // Connect to Database
@@ -10,6 +10,9 @@ const startServer = async () => {
 
   // Phase 11: Seed foundational skills, badges, and intelligence flags
   await seedIntelligenceBasics();
+
+  // Phase 12: Seed career paths, companies, jobs, interview questions, and career flags
+  await seedCareerEcosystem();
 
   const server = app.listen(env.PORT, () => {
     console.log(`[Backend Server] v${env.APP_VERSION} running on port ${env.PORT} in ${env.NODE_ENV} mode`);

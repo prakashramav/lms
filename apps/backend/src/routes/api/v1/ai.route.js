@@ -42,4 +42,11 @@ router.post('/study-plan', aiController.generateStudyPlan);
 // Feedback
 router.post('/messages/:messageId/feedback', aiController.submitFeedback);
 
+// Phase 12: Career AI
+const careerController = require('../../../controllers/career.controller');
+router.post('/career/chat', careerController.chatWithCareerAssistant);
+router.post('/career/resume-analysis', careerController.analyzeResumeAgainstJob);
+router.post('/career/interview-feedback', careerController.evaluateInterviewAnswer);
+
 module.exports = router;
+
