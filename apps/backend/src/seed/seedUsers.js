@@ -12,6 +12,11 @@ const Progress = require('../models/progress.model');
 const Assessment = require('../models/assessment.model');
 const Question = require('../models/question.model');
 const AssessmentAttempt = require('../models/assessmentAttempt.model');
+const Category = require('../models/category.model');
+const { Report } = require('../models/report.model');
+const { Announcement } = require('../models/announcement.model');
+const FeatureFlag = require('../models/featureFlag.model');
+const AuditLog = require('../models/auditLog.model');
 const { seedPracticeProblems } = require('./seedPracticeProblems');
 const env = require('../config/env');
 
@@ -24,7 +29,17 @@ const seedData = async () => {
     // 1. Clear existing collections
     console.log('[Seed] Clearing previous development data...');
     await Promise.all([
-      User.deleteMany({ email: { $in: ['student@example.com', 'instructor@example.com', 'admin@example.com'] } }),
+      User.deleteMany({
+        email: {
+          $in: [
+            'student@example.com',
+            'instructor@example.com',
+            'pending.instructor@example.com',
+            'admin@example.com',
+            'superadmin@example.com',
+          ],
+        },
+      }),
       Course.deleteMany({}),
       Module.deleteMany({}),
       Lesson.deleteMany({}),
@@ -33,6 +48,11 @@ const seedData = async () => {
       Assessment.deleteMany({}),
       Question.deleteMany({}),
       AssessmentAttempt.deleteMany({}),
+      Category.deleteMany({}),
+      Report.deleteMany({}),
+      Announcement.deleteMany({}),
+      FeatureFlag.deleteMany({}),
+      AuditLog.deleteMany({}),
     ]);
 
     // 2. Create Users
@@ -54,11 +74,46 @@ const seedData = async () => {
       isEmailVerified: true,
     });
 
+    const pendingInstructor = await User.create({
+      name: 'Dr. Alan Vance (Pending Instructor)',
+      email: 'pending.instructor@example.com',
+      password: 'InstructorPass123!',
+      role: 'INSTRUCTOR',
+      status: 'PENDING',
+      isEmailVerified: true,
+    });
+
     const admin = await User.create({
-      name: 'Marcus Vance (Demo Admin)',
+      name: 'Marcus Vance (Staff Admin)',
       email: 'admin@example.com',
       password: 'AdminPass123!',
       role: 'ADMIN',
+      permissions: [
+        'users.read',
+        'users.suspend',
+        'instructors.approve',
+        'courses.read',
+        'courses.review',
+        'courses.approve',
+        'courses.publish',
+        'assessments.manage',
+        'problems.manage',
+        'categories.manage',
+        'reports.manage',
+        'analytics.read',
+        'audit.read',
+        'settings.manage',
+      ],
+      status: 'ACTIVE',
+      isEmailVerified: true,
+    });
+
+    const superAdmin = await User.create({
+      name: 'Elena Rostova (Super Admin)',
+      email: 'superadmin@example.com',
+      password: 'SuperAdminPass123!',
+      role: 'SUPER_ADMIN',
+      permissions: [], // Super Admin has universal automatic authorization
       status: 'ACTIVE',
       isEmailVerified: true,
     });
@@ -300,7 +355,7 @@ const seedData = async () => {
     });
 
     // 6. Create Course 4: Draft Course (Unpublished - not visible in catalog)
-    await Course.create({
+    const course4 = await Course.create({
       title: 'System Design for High-Scale Applications',
       slug: 'system-design-high-scale',
       shortDescription: 'Draft course under curriculum faculty review.',
@@ -317,6 +372,122 @@ const seedData = async () => {
       featured: false,
       pricingType: 'FREE',
     });
+
+    // 7. Create Course 5: Cloud Architecture with Kubernetes (Pending Review)
+    const course5 = await Course.create({
+      title: 'Cloud Native Engineering with Docker & Kubernetes',
+      slug: 'cloud-native-docker-kubernetes',
+      shortDescription: 'Production-ready container orchestration, Helm charts, and service meshes awaiting curriculum board review.',
+      description: 'Master Kubernetes primitives, ingress controllers, CI/CD deployment pipelines, and observability.',
+      thumbnail: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&auto=format&fit=crop&q=60',
+      category: 'DevOps & Cloud',
+      difficulty: 'ADVANCED',
+      skills: ['Docker', 'Kubernetes', 'CI/CD', 'Helm'],
+      language: 'English',
+      duration: '26 hours',
+      instructor: instructor._id,
+      status: 'PENDING_REVIEW',
+      isPublished: false,
+      featured: false,
+      pricingType: 'PREMIUM',
+    });
+
+    // Seed Categories
+    console.log('[Seed] Seeding platform categories...');
+    await Category.create([
+      { name: 'Web Development', slug: 'web-development', description: 'Full stack, modern JavaScript, and web architecture', icon: 'Globe', createdBy: admin._id },
+      { name: 'Frontend', slug: 'frontend', description: 'React, Next.js, component design systems, and responsive CSS', icon: 'Layout', createdBy: admin._id },
+      { name: 'Backend', slug: 'backend', description: 'Node.js, Express, Microservices, and RESTful API engineering', icon: 'Server', createdBy: admin._id },
+      { name: 'System Design', slug: 'system-design', description: 'High-scale distributed systems, database sharding, and caching', icon: 'Layers', createdBy: admin._id },
+      { name: 'DevOps & Cloud', slug: 'devops-cloud', description: 'Docker, Kubernetes, CI/CD, and infrastructure automation', icon: 'Cloud', createdBy: admin._id },
+    ]);
+
+    // Seed Feature Flags
+    console.log('[Seed] Seeding feature flags...');
+    await FeatureFlag.create([
+      { key: 'AI_TUTOR_ENABLED', description: 'Enable contextual AI Tutor on student learning portal', enabled: true, environment: 'ALL', updatedBy: superAdmin._id },
+      { key: 'AI_CODE_REVIEW_ENABLED', description: 'Enable real-time AI code analysis and hints in practice sandbox', enabled: true, environment: 'ALL', updatedBy: superAdmin._id },
+      { key: 'INSTRUCTOR_PUBLISH_REQUIRES_APPROVAL', description: 'Require administrator review before instructor courses go live', enabled: true, environment: 'ALL', updatedBy: superAdmin._id },
+      { key: 'CODING_PRACTICE_ENABLED', description: 'Online judge practice sandbox availability', enabled: true, environment: 'ALL', updatedBy: superAdmin._id },
+    ]);
+
+    // Seed Platform Announcements
+    console.log('[Seed] Seeding announcements...');
+    await Announcement.create([
+      {
+        title: 'Platform Maintenance Notice',
+        message: 'Scheduled infrastructure optimizations on Sunday at 02:00 UTC. Sandbox execution will experience brief downtime.',
+        audience: 'ALL',
+        priority: 'NORMAL',
+        status: 'PUBLISHED',
+        createdBy: superAdmin._id,
+      },
+      {
+        title: 'New Coding Problems Published',
+        message: '15 new advanced dynamic programming and graph algorithm challenges have been added to the Practice arena!',
+        audience: 'STUDENTS',
+        priority: 'HIGH',
+        status: 'PUBLISHED',
+        createdBy: admin._id,
+      },
+    ]);
+
+    // Seed Moderation Reports
+    console.log('[Seed] Seeding moderation reports...');
+    await Report.create([
+      {
+        reporterId: student._id,
+        targetType: 'COURSE',
+        targetId: course4._id,
+        reason: 'INCORRECT_INFORMATION',
+        description: 'Module 2 lesson description mentions an outdated Redis command that has been deprecated.',
+        status: 'OPEN',
+      },
+      {
+        reporterId: student._id,
+        targetType: 'SYSTEM',
+        targetId: student._id,
+        reason: 'OTHER',
+        description: 'Suggested improvement for code syntax highlighting theme in dark mode.',
+        status: 'RESOLVED',
+        assignedTo: admin._id,
+        resolution: {
+          actionTaken: 'High-contrast syntax themes deployed in update',
+          notes: 'Resolved via CSS enhancement',
+          resolvedAt: new Date(),
+          resolvedBy: admin._id,
+        },
+      },
+    ]);
+
+    // Seed Initial Audit Logs
+    console.log('[Seed] Seeding initial audit trail...');
+    await AuditLog.create([
+      {
+        actorId: superAdmin._id,
+        actorRole: 'SUPER_ADMIN',
+        action: 'PLATFORM_INITIALIZED',
+        resourceType: 'SYSTEM',
+        resourceId: superAdmin._id,
+        result: 'SUCCESS',
+        ipAddress: '127.0.0.1',
+        userAgent: 'ApexEd-SeedRunner/1.0',
+        metadata: { version: 'Phase-9' },
+        timestamp: new Date(Date.now() - 48 * 3600 * 1000),
+      },
+      {
+        actorId: admin._id,
+        actorRole: 'ADMIN',
+        action: 'COURSE_APPROVED',
+        resourceType: 'COURSE',
+        resourceId: course1._id,
+        result: 'SUCCESS',
+        ipAddress: '127.0.0.1',
+        userAgent: 'ApexEd-AdminPortal/1.0',
+        metadata: { title: course1.title },
+        timestamp: new Date(Date.now() - 24 * 3600 * 1000),
+      },
+    ]);
 
     // 7. Seed Active Enrollment for Demo Student in Course 1
     const demoEnrollment = await Enrollment.create({

@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: ApexLearn EdTech Full-Stack API
+  description: Production REST API specification for student learning, instructor curriculum management, code sandbox execution, AI tutoring, and administrative governance.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Gateway
+  - url: https://api.example.com/api/v1
+    description: Production API Gateway
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Access token passed via Authorization Bearer header
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: Secure HttpOnly refresh token cookie
+
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        requestId:
+          type: string
+          example: d4e6f8a2-1234-5678-9abc-def012345678
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+        - errorCode
+        - requestId
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Invalid authentication credentials
+        errorCode:
+          type: string
+          example: INVALID_CREDENTIALS
+        requestId:
+          type: string
+          example: f3a8c129-9876-5432-10fe-dcba98765432
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, INSTRUCTOR, ADMIN, SUPER_ADMIN]
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, PENDING, DEACTIVATED]
+        avatar:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /health:
+    get:
+      summary: Liveness health probe
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: API is running
+
+  /health/ready:
+    get:
+      summary: Readiness probe verifying MongoDB database dependency
+      responses:
+        '200':
+          description: Service and backing dependencies ready
+        '503':
+          description: Database connection offline
+
+  /health/live:
+    get:
+      summary: Process uptime probe
+      responses:
+        '200':
+          description: Process active
+
+  /auth/register:
+    post:
+      summary: Register a new student account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '201':
+          description: Account created successfully
+        '400':
+          description: Validation error
+        '409':
+          description: Email already in use
+
+  /auth/login:
+    post:
+      summary: Authenticate user session (Student, Instructor, Admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                expectedRole:
+                  type: string
+                  enum: [STUDENT, INSTRUCTOR, ADMIN]
+      responses:
+        '200':
+          description: Authentication successful
+        '401':
+          description: Invalid credentials
+        '403':
+          description: Account suspended or role mismatch
+
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token and obtain fresh access token
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Session refreshed
+        '401':
+          description: Invalid or expired refresh token
+
+  /auth/logout:
+    post:
+      summary: Invalidate user session and clear cookies
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /courses:
+    get:
+      summary: Browse published course catalog
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of courses
+
+  /courses/{slug}:
+    get:
+      summary: Get full curriculum and lesson outlines for a course
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed course document
+        '404':
+          description: Course not found
+
+  /enrollments:
+    post:
+      summary: Enroll current student in a course
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId]
+              properties:
+                courseId:
+                  type: string
+      responses:
+        '201':
+          description: Enrolled successfully
+        '409':
+          description: Already enrolled
+
+  /practice/problems:
+    get:
+      summary: List coding problems with difficulty and status filters
+      parameters:
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of practice problems
+
+  /practice/problems/{slug}:
+    get:
+      summary: Get problem specification and public test cases
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Problem details without hidden test cases
+
+  /practice/problems/{id}/run:
+    post:
+      summary: Execute code in sandbox against sample test cases
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, language]
+              properties:
+                code:
+                  type: string
+                language:
+                  type: string
+      responses:
+        '200':
+          description: Sandbox run results
+
+  /practice/problems/{id}/submit:
+    post:
+      summary: Formal submission evaluated against public and hidden test cases
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, language]
+              properties:
+                code:
+                  type: string
+                language:
+                  type: string
+      responses:
+        '200':
+          description: Submission verdict and score
+
+  /ai/tutor/chat:
+    post:
+      summary: Interactive pedagogical assistance from AI Tutor
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                contextType:
+                  type: string
+                contextId:
+                  type: string
+      responses:
+        '200':
+          description: AI Tutor response
+        '429':
+          description: AI Rate limit exceeded
+
+  /admin/users:
+    get:
+      summary: Manage platform users (Admin/SuperAdmin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated user list
+        '403':
+          description: Forbidden - requires ADMIN role

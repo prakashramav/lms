@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -26,6 +26,18 @@ export function AuthProvider({ children }) {
       setIsLoading(false);
     }
   }, []);
+
+  const hasPermission = useCallback(
+    (permissionKey) => {
+      if (!user) return false;
+      if (user.role === 'SUPER_ADMIN') return true;
+      if (user.role === 'ADMIN') {
+        return Array.isArray(user.permissions) && user.permissions.includes(permissionKey);
+      }
+      return false;
+    },
+    [user]
+  );
 
   const login = async (email, password) => {
     setIsLoading(true);
@@ -72,16 +84,27 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const handleSessionExpired = useCallback(() => {
+    setUser(null);
+    setAccessToken(null);
+    localStorage.removeItem('apex_admin_token');
+    localStorage.removeItem('apex_admin_user');
+    window.location.href = '/login?expired=1';
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         accessToken,
         isAuthenticated: !!user,
+        isSuperAdmin: user?.role === 'SUPER_ADMIN',
+        hasPermission,
         isLoading,
         error,
         login,
         logout,
+        handleSessionExpired,
         setError,
       }}
     >

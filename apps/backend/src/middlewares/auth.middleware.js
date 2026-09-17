@@ -9,6 +9,7 @@ const env = require('../config/env');
 const authenticate = async (req, res, next) => {
   try {
     let token = null;
+    const requestId = req.id || req.requestId || 'unknown';
 
     // Extract Bearer token from headers
     if (
@@ -25,6 +26,7 @@ const authenticate = async (req, res, next) => {
         success: false,
         message: 'Authentication required. No token provided.',
         errorCode: 'UNAUTHORIZED',
+        requestId,
       });
     }
 
@@ -38,12 +40,14 @@ const authenticate = async (req, res, next) => {
           success: false,
           message: 'Access token expired. Please refresh your session.',
           errorCode: 'TOKEN_EXPIRED',
+          requestId,
         });
       }
       return res.status(401).json({
         success: false,
         message: 'Invalid access token.',
         errorCode: 'INVALID_TOKEN',
+        requestId,
       });
     }
 
@@ -54,6 +58,7 @@ const authenticate = async (req, res, next) => {
         success: false,
         message: 'User session no longer valid.',
         errorCode: 'USER_NOT_FOUND',
+        requestId,
       });
     }
 
@@ -63,6 +68,7 @@ const authenticate = async (req, res, next) => {
         success: false,
         message: `Account is ${user.status.toLowerCase()}. Access denied.`,
         errorCode: 'ACCOUNT_INACTIVE',
+        requestId,
       });
     }
 
@@ -79,11 +85,13 @@ const authenticate = async (req, res, next) => {
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
+    const requestId = req.id || req.requestId || 'unknown';
     if (!req.user) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required.',
         errorCode: 'UNAUTHORIZED',
+        requestId,
       });
     }
 
@@ -92,6 +100,7 @@ const authorize = (...roles) => {
         success: false,
         message: `Access denied. Requires one of roles: [${roles.join(', ')}]`,
         errorCode: 'FORBIDDEN',
+        requestId,
       });
     }
 
@@ -140,4 +149,3 @@ module.exports = {
   authorize,
   optionalAuthenticate,
 };
-

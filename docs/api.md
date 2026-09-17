@@ -9,7 +9,8 @@ Base URL: `/api/v1`
 {
   "success": true,
   "message": "Human readable message",
-  "data": {}
+  "data": {},
+  "requestId": "d4e6f8a2-1234-5678-9abc-def012345678"
 }
 ```
 
@@ -18,16 +19,18 @@ Base URL: `/api/v1`
 {
   "success": false,
   "message": "Error description",
-  "errorCode": "ERROR_CODE_IDENTIFIER"
+  "errorCode": "ERROR_CODE_IDENTIFIER",
+  "requestId": "f3a8c129-9876-5432-10fe-dcba98765432"
 }
 ```
 
 ---
 
-## Endpoints
+## System Health & Readiness Endpoints
+- `GET /api/v1/health` - Basic uptime and operational health status.
+- `GET /api/v1/health/ready` - Backing dependency readiness check (MongoDB connection state).
+- `GET /api/v1/health/live` - Process liveness probe with uptime in seconds.
 
-### System Endpoints
-- `GET /api/v1/health` - Uptime and operational health status.
 
 ---
 
