@@ -101,18 +101,29 @@ const getStudentDashboardData = async (userId) => {
 
   // 4. Streak telemetry
   const streak = {
-    currentDays: 12,
-    bestDays: 18,
+    currentDays: 0,
+    bestDays: 0,
     weeklyActivity: [
-      { day: 'Mon', active: true, date: '2026-09-10' },
-      { day: 'Tue', active: true, date: '2026-09-11' },
-      { day: 'Wed', active: true, date: '2026-09-12' },
-      { day: 'Thu', active: true, date: '2026-09-13' },
-      { day: 'Fri', active: true, date: '2026-09-14' },
-      { day: 'Sat', active: true, date: '2026-09-15' },
-      { day: 'Sun', active: true, date: '2026-09-16' },
+      { day: 'Mon', active: false, date: '2026-09-10' },
+      { day: 'Tue', active: false, date: '2026-09-11' },
+      { day: 'Wed', active: false, date: '2026-09-12' },
+      { day: 'Thu', active: false, date: '2026-09-13' },
+      { day: 'Fri', active: false, date: '2026-09-14' },
+      { day: 'Sat', active: false, date: '2026-09-15' },
+      { day: 'Sun', active: false, date: '2026-09-16' },
     ],
   };
+
+  try {
+    const { LearningProfile } = require('../models/learningProfile.model');
+    const lp = await LearningProfile.findOne({ studentId: userId });
+    if (lp && lp.learningVelocity) {
+      streak.currentDays = lp.learningVelocity.streakDays || 0;
+      streak.bestDays = lp.learningVelocity.longestStreak || 0;
+    }
+  } catch {
+    // Graceful fallback
+  }
 
   // 5. Pending evaluations and tasks
   const pendingTasks = [

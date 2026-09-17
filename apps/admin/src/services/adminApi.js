@@ -59,6 +59,11 @@ export const adminApi = {
   getLearningAnalytics: () => request('/admin/analytics/learning'),
   getAiMonitoring: () => request('/admin/analytics/ai'),
 
+  // Phase 11: Learning Health & Intelligence
+  getLearningHealth: () => request('/admin/analytics/learning-health'),
+  getRecommendationAnalytics: () => request('/admin/analytics/recommendations'),
+  getEngagementAnalytics: () => request('/admin/analytics/engagement'),
+
   // User Management
   getUsers: (params) => request(`/admin/users${buildQuery(params)}`),
   getUserById: (id) => request(`/admin/users/${id}`),

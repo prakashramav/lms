@@ -265,6 +265,45 @@ class PracticeService {
     }
     await problem.save();
 
+    // Phase 11: Learning Intelligence hook (non-blocking)
+    try {
+      const learningEventService = require('./intelligence/event.service');
+      const achievementService = require('./intelligence/achievement.service');
+      const goalService = require('./intelligence/goal.service');
+      const Mistake = require('../models/mistake.model');
+
+      const isAccepted = result.verdict === 'ACCEPTED';
+      learningEventService.recordEvent({
+        studentId,
+        eventType: isAccepted ? 'CODING_SOLVED' : 'CODING_ATTEMPTED',
+        resourceType: 'Problem',
+        resourceId: problem._id,
+        metadata: { verdict: result.verdict, passedTests: result.passedTests, totalTests: result.totalTests }
+      }).catch(() => {});
+
+      if (isAccepted) {
+        achievementService.checkAndAwardBadges(studentId, 'FIRST_PROBLEM').catch(() => {});
+        goalService.incrementGoalProgress(studentId, 'CODING', 1).catch(() => {});
+      } else {
+        // Record coding mistake
+        const primaryTopic = (problem.topics && problem.topics[0]) || problem.category || 'Algorithms';
+        Mistake.create({
+          studentId,
+          sourceType: 'CODING',
+          sourceId: submission._id,
+          problemId: problem._id,
+          topic: primaryTopic,
+          mistakeType: result.verdict === 'TIME_LIMIT_EXCEEDED' ? 'TIMEOUT' : 'LOGICAL_ERROR',
+          promptSnippet: problem.title,
+          studentAnswer: code.slice(0, 300),
+          explanation: `Failed test cases on ${problem.title}. Review edge cases and logic constraints.`,
+          resolved: false
+        }).catch(() => {});
+      }
+    } catch (e) {
+      // Non-blocking fallback
+    }
+
     return {
       submissionId: submission._id,
       status: submission.status,
