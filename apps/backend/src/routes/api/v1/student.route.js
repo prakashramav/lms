@@ -48,4 +48,42 @@ router.get('/weekly-review', authenticate, authorize('STUDENT'), intelligenceCon
 router.get('/settings/learning', authenticate, authorize('STUDENT'), intelligenceController.getLearningSettings);
 router.patch('/settings/learning', authenticate, authorize('STUDENT'), intelligenceController.updateLearningSettings);
 
+// ================= PHASE 12: CAREER INTELLIGENCE & PLACEMENT =================
+const careerController = require('../../../controllers/career.controller');
+
+// Career Profile, Roadmap & Skill Gaps
+router.get('/career-profile', authenticate, authorize('STUDENT'), careerController.getStudentCareerProfile);
+router.post('/career-profile/target', authenticate, authorize('STUDENT'), careerController.updateTargetCareer);
+router.get('/skill-gaps', authenticate, authorize('STUDENT'), careerController.getStudentSkillGaps);
+
+// Career Plan
+router.get('/career-plan', authenticate, authorize('STUDENT'), careerController.getStudentCareerPlan);
+router.patch('/career-plan', authenticate, authorize('STUDENT'), careerController.updateCareerPlan);
+router.post('/career-plan/milestones/toggle', authenticate, authorize('STUDENT'), careerController.toggleMilestone);
+router.get('/career-analytics', authenticate, authorize('STUDENT'), careerController.getStudentCareerAnalytics);
+
+// Saved Jobs
+router.get('/saved-jobs', authenticate, authorize('STUDENT'), careerController.getSavedJobs);
+
+// Applications
+router.get('/applications', authenticate, authorize('STUDENT'), careerController.getStudentApplications);
+router.post('/applications', authenticate, authorize('STUDENT'), careerController.applyToJob);
+router.get('/applications/:applicationId', authenticate, authorize('STUDENT'), careerController.getApplicationById);
+router.patch('/applications/:applicationId', authenticate, authorize('STUDENT'), careerController.updateApplicationStatus);
+router.patch('/applications/:applicationId/notes', authenticate, authorize('STUDENT'), careerController.updateStudentNotes);
+
+// Resumes
+router.get('/resumes', authenticate, authorize('STUDENT'), careerController.getStudentResumes);
+router.post('/resumes', authenticate, authorize('STUDENT'), careerController.createResume);
+router.get('/resumes/:resumeId', authenticate, authorize('STUDENT'), careerController.getResumeById);
+router.patch('/resumes/:resumeId', authenticate, authorize('STUDENT'), careerController.updateResume);
+router.delete('/resumes/:resumeId', authenticate, authorize('STUDENT'), careerController.deleteResume);
+router.post('/resumes/:resumeId/analyze', authenticate, authorize('STUDENT'), careerController.analyzeResume);
+router.post('/resumes/:resumeId/restore', authenticate, authorize('STUDENT'), careerController.restoreResumeVersion);
+
+// Portfolio
+router.get('/portfolio', authenticate, authorize('STUDENT'), careerController.getStudentPortfolio);
+router.patch('/portfolio', authenticate, authorize('STUDENT'), careerController.updatePortfolio);
+
 module.exports = router;
+

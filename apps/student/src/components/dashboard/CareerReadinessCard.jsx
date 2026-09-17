@@ -61,12 +61,29 @@ export default function CareerReadinessCard({ career }) {
         })}
       </div>
 
-      <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
-        <span>Evaluated across tests, code submissions & milestones</span>
+      <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-700/60">
+        <div className="flex items-center gap-3">
+          <Link href="/jobs" className="hover:text-brand-500 transition-colors">
+            Job Board
+          </Link>
+          <span>•</span>
+          <Link href="/applications" className="hover:text-brand-500 transition-colors">
+            Applications
+          </Link>
+          <span>•</span>
+          <Link href="/resume" className="hover:text-brand-500 transition-colors">
+            Resume
+          </Link>
+          <span>•</span>
+          <Link href="/interview-prep" className="hover:text-brand-500 transition-colors">
+            Interview Prep
+          </Link>
+        </div>
         <Link href="/career" className="font-semibold text-brand-600 dark:text-brand-400 hover:underline">
-          View Detailed Skill Gap Analysis →
+          Career Hub &amp; Skill Gap Analysis →
         </Link>
       </div>
     </div>
   );
 }
+

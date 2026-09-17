@@ -11,6 +11,11 @@ const assessmentRoutes = require('./api/v1/assessment.route');
 const practiceRoutes = require('./api/v1/practice.route');
 const aiRoutes = require('./api/v1/ai.route');
 const instructorRoutes = require('./api/v1/instructor.route');
+const careerRoutes = require('./api/v1/career.route');
+const jobRoutes = require('./api/v1/job.route');
+const interviewRoutes = require('./api/v1/interview.route');
+const employerRoutes = require('./api/v1/employer.route');
+const portfolioRoutes = require('./api/v1/portfolio.route');
 
 const router = express.Router();
 
@@ -26,5 +31,11 @@ router.use('/bookmarks', bookmarkRoutes);
 router.use('/assessments', assessmentRoutes);
 router.use('/practice', practiceRoutes);
 router.use('/ai', aiRoutes);
+router.use('/career', careerRoutes);
+router.use('/jobs', jobRoutes);
+router.use('/interview', interviewRoutes);
+router.use('/employer', employerRoutes);
+router.use('/portfolio', portfolioRoutes);
 
 module.exports = router;
+

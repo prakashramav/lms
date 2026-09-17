@@ -142,4 +142,14 @@ export const adminApi = {
     request(`/admin/admins/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   disableAdmin: (id) =>
     request(`/admin/admins/${id}/disable`, { method: 'POST' }),
+
+  // Phase 12: Career & Placement Administration
+  getPlacementAnalytics: () => request('/admin/career/analytics'),
+  getJobReports: () => request('/admin/career/reports'),
+  updateJobReport: (id, status) =>
+    request(`/admin/career/reports/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateJobStatus: (id, status) =>
+    request(`/admin/career/jobs/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getAdminJobs: (params) => request(`/jobs${buildQuery(params)}`),
 };
+
