@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-09-18 - Phase 20 Enterprise Scale, Integrations & Platform Extensibility
+
+### Added
+- **Multi-Tenant Organization Permissions & Governance**:
+  - `docs/security/organization-permissions.md`: Complete permission matrix covering Organization Admin, Instructor, Mentor, Learner, and Recruiter with server-side tenant isolation guarantees.
+- **Provider Abstraction & Integration Architecture**:
+  - `docs/integrations/integration-matrix.md`: Clean provider interfaces for AI (`AIProvider`), Object Storage (`StorageProvider`), Sandbox Runners, Email, and Payments with graceful fallbacks.
+- **Modular Monolith & Enterprise Scaling**:
+  - `docs/enterprise/enterprise-architecture.md`: Architecture specification detailing horizontal scaling, distributed rate limiters, stateless sessions, and background workers with Dead Letter Queues (DLQ).
+- **Cross-Role Platform Capability Matrix**:
+  - `docs/platform-capability-matrix.md`: Comprehensive capability mapping across Student, Instructor, Admin, Employer, API, and Mobile viewports.
+- **Phase 20 Enterprise Validation Report**:
+  - `docs/releases/phase-20-validation.md`: Final enterprise readiness validation report confirming zero fake integrations or unmeasured scalability claims.
+
+---
+
 ## [1.5.0] - 2026-09-18 - Phase 19 Post-Launch Intelligence, Optimization & Continuous Improvement
 
 ### Added
