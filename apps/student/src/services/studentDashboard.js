@@ -7,7 +7,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
  */
 export async function fetchStudentDashboard(accessToken) {
   if (!accessToken) {
-    throw new Error('Authentication required to load dashboard');
+    const err = new Error('Authentication required to load dashboard');
+    err.status = 401;
+    throw err;
   }
 
   const res = await fetch(`${API_BASE_URL}/student/dashboard`, {
@@ -18,6 +20,12 @@ export async function fetchStudentDashboard(accessToken) {
     },
     credentials: 'include',
   });
+
+  if (res.status === 401) {
+    const err = new Error('SESSION_EXPIRED');
+    err.status = 401;
+    throw err;
+  }
 
   const data = await res.json();
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import StudentLayout from '../../components/layout/StudentLayout';
 import { useAuth } from '../../context/AuthContext';
 import { fetchStudentDashboard } from '../../services/studentDashboard';
@@ -21,16 +22,29 @@ import CodingProgressCard from '../../components/dashboard/CodingProgressCard';
 import AITutorCard from '../../components/dashboard/AITutorCard';
 import DashboardSkeleton from '../../components/dashboard/DashboardSkeleton';
 
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import { AlertCircle, RefreshCw, Home, LogIn } from 'lucide-react';
 
 export default function StudentDashboardPage() {
-  const { user, accessToken } = useAuth();
+  const router = useRouter();
+  const { user, accessToken, isLoading, refreshAccessToken } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // If initial auth check finished and user is not authenticated, redirect to login
+  useEffect(() => {
+    if (!isLoading && !user && !accessToken) {
+      router.push('/login?redirect=/dashboard');
+    }
+  }, [isLoading, user, accessToken, router]);
+
   const loadDashboard = useCallback(async () => {
-    if (!accessToken) return;
+    if (isLoading) return;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -38,11 +52,26 @@ export default function StudentDashboardPage() {
       const dashboardData = await fetchStudentDashboard(accessToken);
       setData(dashboardData);
     } catch (err) {
-      setError(err.message || 'Unable to load your dashboard.');
+      if (err.status === 401 || err.message === 'SESSION_EXPIRED') {
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          try {
+            const retriedData = await fetchStudentDashboard(refreshedToken);
+            setData(retriedData);
+            return;
+          } catch {
+            setError('Your session has expired. Please sign in again.');
+          }
+        } else {
+          setError('Your session has expired. Please sign in again.');
+        }
+      } else {
+        setError(err.message || 'Unable to load your dashboard.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, isLoading, refreshAccessToken]);
 
   useEffect(() => {
     loadDashboard();
@@ -65,13 +94,23 @@ export default function StudentDashboardPage() {
               <p className="text-sm text-slate-500 dark:text-slate-400">{error}</p>
             </div>
             <div className="flex items-center justify-center gap-4 pt-2">
-              <button
-                onClick={loadDashboard}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition shadow-sm"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Retry
-              </button>
+              {(!user || !accessToken || error.includes('session') || error.includes('sign in') || error.includes('expired')) ? (
+                <Link
+                  href="/login?redirect=/dashboard"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition shadow-sm"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign In to Your Account
+                </Link>
+              ) : (
+                <button
+                  onClick={loadDashboard}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition shadow-sm"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </button>
+              )}
               <Link
                 href="/"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-semibold transition"
