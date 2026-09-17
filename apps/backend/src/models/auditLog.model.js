@@ -10,7 +10,7 @@ const auditLogSchema = new mongoose.Schema(
     },
     actorRole: {
       type: String,
-      enum: ['STUDENT', 'INSTRUCTOR', 'ADMIN', 'SUPER_ADMIN', 'SYSTEM'],
+      enum: ['STUDENT', 'INSTRUCTOR', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYER', 'SYSTEM'],
       required: true,
     },
     action: {
@@ -41,6 +41,12 @@ const auditLogSchema = new mongoose.Schema(
         'FEATURE_FLAG',
         'ANNOUNCEMENT',
         'ADMIN',
+        'APPLICATION',
+        'JOB',
+        'INTERVIEW',
+        'CERTIFICATE',
+        'SUPPORT_TICKET',
+        'PROJECT',
         'SYSTEM',
       ],
       index: true,

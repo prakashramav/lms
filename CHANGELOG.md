@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-09-17 - Phase 14 Advanced Intelligence, Personalization & Ecosystem
+
+### Added
+- **Centralized Personalization Service (`services/personalization/`)**:
+  - `studentProfileService.js`: Dynamic multi-dimensional student profile synthesizing course velocity, skill mastery levels, weak topics, and career intents.
+  - `learningRecommendationService.js`: Smart "Continue Learning" engine with adaptive remediation for prerequisite weaknesses and explainable `reasonCodes`.
+  - `careerRecommendationService.js`: Transparent skill gap analysis against 9+ core roles and 5-phase structured roadmaps.
+  - `contentRecommendationService.js`: Dynamic project, course, and practice recommendations with transparent explanation metadata.
+  - `engagementService.js`: Structured weekly progress reports and multi-metric learning streak tracking.
+- **Skill Graph & Mastery Calibrations**:
+  - Differentiated mastery dimensions: `observedScore`, `selfReportedLevel`, `assessmentBasedLevel`, and `aiEstimatedLevel`.
+  - `SkillRelationship` model establishing prerequisites and related competencies.
+- **AI Learning Coach (`aiCoach.service.js`)**:
+  - Context-isolated coaching across 7 modes: `EXPLAIN`, `PRACTICE`, `REVIEW`, `PLAN`, `DEBUG`, `INTERVIEW`, `CAREER`.
+- **Verifiable Certificate Credentialing (`certificate.model.js`)**:
+  - Cryptographically identifiable certificates generated strictly upon validated completion.
+  - Public verification route: `/verify/certificate/:id` and API endpoint `GET /api/v1/certificates/verify/:id`.
+- **Student Support Helpdesk & AI Classifier (`supportTicket.model.js`)**:
+  - Threaded helpdesk ticketing across Technical, Course Content, Account, Career, and Billing domains.
+  - Intelligent categorization and urgency estimation via `aiSupportClassifier.js`.
+- **Project Showcase & Community (`projectShowcase.model.js`)**:
+  - Dedicated showcase interface allowing students to publish portfolio projects with GitHub and demo links.
+- **Employer ATS Kanban Board (`employerIntelligence.js`)**:
+  - Multi-stage candidate management pipeline (`APPLIED`, `SCREENING`, `SHORTLISTED`, `INTERVIEW`, `ASSESSMENT`, `OFFER`, `REJECTED`, `WITHDRAWN`).
+  - Audited stage transitions logged to `AuditLog`.
+- **Admin Intelligence & Aggregated Analytics (`adminIntelligenceExtended.js`)**:
+  - Safe materialized conversion funnels, cohort retention tracking, and AI token/latency telemetry.
+
 ## [1.0.0] - 2026-09-17 - Final Production Launch
 
 ### Production Architecture & Platform Envelope

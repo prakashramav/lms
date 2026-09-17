@@ -16,6 +16,12 @@ const jobRoutes = require('./api/v1/job.route');
 const interviewRoutes = require('./api/v1/interview.route');
 const employerRoutes = require('./api/v1/employer.route');
 const portfolioRoutes = require('./api/v1/portfolio.route');
+const personalizationRoutes = require('./api/v1/personalization.route');
+const certificateRoutes = require('./api/v1/certificate.route');
+const supportRoutes = require('./api/v1/support.route');
+const showcaseRoutes = require('./api/v1/showcase.route');
+const feedbackRoutes = require('./api/v1/feedback.route');
+const searchRoutes = require('./api/v1/search.route');
 
 const router = express.Router();
 
@@ -36,6 +42,12 @@ router.use('/jobs', jobRoutes);
 router.use('/interview', interviewRoutes);
 router.use('/employer', employerRoutes);
 router.use('/portfolio', portfolioRoutes);
+router.use('/personalization', personalizationRoutes);
+router.use('/certificates', certificateRoutes);
+router.use('/support', supportRoutes);
+router.use('/showcase', showcaseRoutes);
+router.use('/feedback', feedbackRoutes);
+router.use('/search', searchRoutes);
 
 module.exports = router;
 

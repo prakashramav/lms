@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const MASTERY_LEVELS = [
   'NOT_STARTED',
+  'BEGINNER',
   'INTRODUCED',
   'PRACTICING',
   'DEVELOPING',
+  'INTERMEDIATE',
   'PROFICIENT',
+  'ADVANCED',
+  'MASTERED',
   'REVIEW_RECOMMENDED',
 ];
 

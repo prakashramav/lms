@@ -70,6 +70,28 @@ const studentSkillSchema = new mongoose.Schema(
       default: 'NOT_STARTED',
       index: true,
     },
+    // Phase 14: Distinct mastery dimensions
+    observedScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    selfReportedLevel: {
+      type: String,
+      enum: ['NONE', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+      default: 'NONE',
+    },
+    assessmentBasedLevel: {
+      type: String,
+      enum: MASTERY_LEVELS,
+      default: 'NOT_STARTED',
+    },
+    aiEstimatedLevel: {
+      type: String,
+      enum: MASTERY_LEVELS,
+      default: 'NOT_STARTED',
+    },
     exposureCount: {
       type: Number,
       default: 0,
