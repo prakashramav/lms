@@ -8,6 +8,8 @@
     "start": "node src/server.js",
     "seed": "node src/seed/seedUsers.js",
     "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles",
+    "test:security": "cross-env NODE_ENV=test jest --runInBand tests/sandboxSecurity.test.js tests/securityAudit.test.js",
+    "test:performance": "cross-env NODE_ENV=test jest --runInBand tests/performance.test.js",
     "lint": "echo \"Backend lint passed\""
   },
   "dependencies": {

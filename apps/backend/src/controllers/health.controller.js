@@ -6,6 +6,17 @@ const env = require('../config/env');
  * @route GET /api/v1/health
  */
 const getHealth = (req, res) => {
+  if (req.originalUrl === '/health' || req.path === '/health') {
+    return res.status(200).json({
+      status: 'UP',
+      service: 'lms-backend',
+      version: env.APP_VERSION,
+      timestamp: new Date().toISOString(),
+      success: true,
+      message: 'API is running',
+    });
+  }
+
   res.status(200).json({
     success: true,
     message: 'API is running',

@@ -21,7 +21,9 @@ if (isProduction) {
   if (missing.length > 0) {
     // Fail clearly without exposing any existing secret values
     throw new Error(
-      `[Startup Error] Missing required production environment variable(s): ${missing.join(', ')}`
+      `[Startup Error] Missing required production environment variable(s): ${missing.join(', ')}\n` +
+      `Environment: ${NODE_ENV}\n` +
+      `Explanation: Core services require these variables for secure token cryptographic signing and database persistence. Please configure them in your production environment.`
     );
   }
 }

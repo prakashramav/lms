@@ -8,6 +8,9 @@ const ai = require('./ai');
 const redis = require('./redis');
 const logging = require('./logging');
 
+const security = require('./security');
+const app = require('./app');
+
 module.exports = {
   env,
   database,
@@ -18,4 +21,6 @@ module.exports = {
   ai,
   redis,
   logging,
+  security,
+  app,
 };

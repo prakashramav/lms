@@ -68,6 +68,15 @@ const auditLogSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    requestId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    ipHash: {
+      type: String,
+      default: null,
+    },
     timestamp: {
       type: Date,
       default: Date.now,
@@ -82,6 +91,13 @@ const auditLogSchema = new mongoose.Schema(
 
 auditLogSchema.index({ actorId: 1, timestamp: -1 });
 auditLogSchema.index({ resourceType: 1, resourceId: 1, timestamp: -1 });
+auditLogSchema.index({ action: 1, timestamp: -1 });
+
+// Phase 13 Section 78: Audit log immutability
+auditLogSchema.pre(['updateOne', 'updateMany', 'findOneAndUpdate', 'findOneAndReplace'], function (next) {
+  const err = new Error('[Audit Security] Audit logs are immutable and cannot be updated.');
+  next(err);
+});
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 

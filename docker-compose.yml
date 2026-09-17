@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:7.0
+    container_name: edtech-mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: edtech_platform
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Queue Service
+  redis:
+    image: redis:7.2-alpine
+    container_name: edtech-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LMS Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edtech-backend
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://mongodb:27017/edtech_platform
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: production_docker_compose_jwt_secret_min_32_characters
+      JWT_REFRESH_SECRET: production_docker_compose_refresh_secret_min_32_chars
+      STUDENT_APP_URL: http://localhost:3000
+      INSTRUCTOR_APP_URL: http://localhost:3001
+      ADMIN_APP_URL: http://localhost:3002
+      API_URL: http://localhost:5000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://localhost:5000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongodb_data:
+  redis_data:

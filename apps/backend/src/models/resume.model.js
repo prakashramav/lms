@@ -111,6 +111,7 @@ const resumeSchema = new mongoose.Schema(
 );
 
 resumeSchema.index({ studentId: 1, title: 1 });
+resumeSchema.index({ studentId: 1, updatedAt: -1 });
 
 const Resume = mongoose.models.Resume || mongoose.model('Resume', resumeSchema);
 
