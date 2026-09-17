@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-09-17 - Phase 17 Production Hardening, Security, Scalability & Launch Readiness
+
+### Added
+- **Frontend App Router Resiliency & Error Boundaries**:
+  - `error.jsx` and `not-found.jsx` implemented across all 3 portals (`apps/student`, `apps/instructor`, `apps/admin`).
+  - Safe recovery UX with interactive retry triggers, error digest logging, and direct links back to dashboards without blank screens.
+- **Database Index Optimization**:
+  - Compound indexing on `Course` (`{ isPublished: 1, status: 1, category: 1 }`, `{ instructor: 1, status: 1 }`).
+  - Compound indexing on `Enrollment` (`{ studentId: 1, status: 1 }`, `{ courseId: 1, status: 1 }`).
+  - Whitelisted sorting parameters and maximum page size limits preventing unbounded resource reads.
+- **Operational Runbooks & Incident Response**:
+  - `docs/operations/disaster-recovery.md`: RPO <= 1h, RTO <= 30m recovery procedures for MongoDB, AI providers, and cloud storage.
+  - `docs/operations/incident-response.md`: Severity triage protocol (P0-P3), mitigation lead workflows, and blameless postmortem templates.
+  - `docs/operations/deployment-runbook.md`: Production startup commands, Windows PowerShell scripts, zero-downtime rolling deployment guidelines, and rollback procedures.
+- **Security Architecture & Test Reports**:
+  - `docs/security/security-model.md`: Full architecture documentation covering JWT session handling, RBAC, IDOR guards, and NoSQL sanitization.
+  - `docs/security/security-test-report.md`: Automated security verification covering OWASP Top 10 mitigation strategies.
+  - `docs/testing/final-test-matrix.md`: Matrix covering all 26 test suites and 266 passing integration tests.
+  - `docs/production-readiness-report.md`: Production readiness assessment scorecard.
+  - `docs/risk-register.md`: Comprehensive operational risk register with owners and mitigation status.
+- **API Inventory & Topology**:
+  - `docs/api/api-inventory.md`: Exhaustive catalog of all endpoints across 25+ route modules with auth, roles, and rate limits.
+  - `docs/architecture/system-architecture.md`: Updated end-to-end mermaid topology showing multi-app frontend, Express API Gateway, AI router with circuit breakers, background workers, and MongoDB/Redis persistence.
+
+---
+
 ## [1.3.0] - 2026-09-17 - Phase 16 Advanced Learning Intelligence & Ecosystem
 
 ### Added

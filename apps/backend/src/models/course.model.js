@@ -155,8 +155,9 @@ courseSchema.index({
   category: 'text',
 });
 
-// Category and status compound query index
-courseSchema.index({ status: 1, category: 1, level: 1 });
+// Catalog and querying compound indexes
+courseSchema.index({ isPublished: 1, status: 1, category: 1 });
+courseSchema.index({ instructor: 1, status: 1 });
 courseSchema.index({ instructorId: 1, status: 1 });
 
 // Virtual populate for modules
