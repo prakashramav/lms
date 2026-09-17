@@ -63,11 +63,18 @@ const router = express.Router();
 // Strict RBAC: All routes require authentication and INSTRUCTOR or ADMIN role
 router.use(authenticate, authorize('INSTRUCTOR', 'ADMIN'));
 
+const intelligenceController = require('../../../controllers/intelligence.controller');
+
 // -------------------------------------------------------------
 // ANALYTICS & OVERVIEW
 // -------------------------------------------------------------
 router.get('/analytics/overview', getOverviewAnalytics);
 router.get('/courses/:courseId/analytics', requireCourseOwner, getCourseAnalytics);
+
+// Phase 11: Course Intelligence & Student Support Signals
+router.get('/courses/:courseId/intelligence', requireCourseOwner, intelligenceController.getCourseIntelligence);
+router.get('/courses/:courseId/weak-topics', requireCourseOwner, intelligenceController.getCourseWeakTopics);
+router.get('/courses/:courseId/common-mistakes', requireCourseOwner, intelligenceController.getCourseCommonMistakes);
 
 // -------------------------------------------------------------
 // COURSE MANAGEMENT

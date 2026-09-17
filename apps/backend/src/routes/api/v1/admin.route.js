@@ -6,6 +6,7 @@ const {
   requireSuperAdmin,
 } = require('../../../middlewares/admin.permission.middleware');
 const adminController = require('../../../controllers/admin.controller');
+const intelligenceController = require('../../../controllers/intelligence.controller');
 
 const router = express.Router();
 
@@ -26,6 +27,11 @@ router.get('/analytics/users', requirePermission('analytics.read'), adminControl
 router.get('/analytics/courses', requirePermission('analytics.read'), adminController.getCourseAnalytics);
 router.get('/analytics/learning', requirePermission('analytics.read'), adminController.getLearningAnalytics);
 router.get('/analytics/ai', requirePermission('analytics.read'), adminController.getAiMonitoring);
+
+// Phase 11: Learning Health & Intelligence Analytics
+router.get('/analytics/learning-health', requirePermission('analytics.read'), intelligenceController.getPlatformLearningHealth);
+router.get('/analytics/recommendations', requirePermission('analytics.read'), intelligenceController.getAdminRecommendations);
+router.get('/analytics/engagement', requirePermission('analytics.read'), intelligenceController.getAdminEngagement);
 
 // ==========================================
 // 3. USER MANAGEMENT (STUDENTS & INSTRUCTORS)

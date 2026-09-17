@@ -383,6 +383,62 @@ async function submitAttempt(attemptId, studentId) {
 
   await attempt.save();
 
+  // Phase 11: Learning Intelligence hook (non-blocking)
+  try {
+    const learningEventService = require('./intelligence/event.service');
+    const achievementService = require('./intelligence/achievement.service');
+    const goalService = require('./intelligence/goal.service');
+    const Mistake = require('../models/mistake.model');
+    const { SpacedReview } = require('../models/spacedReview.model');
+
+    learningEventService.recordEvent({
+      studentId,
+      eventType: 'QUIZ_SUBMITTED',
+      resourceType: 'Assessment',
+      resourceId: attempt.assessmentId,
+      metadata: { score: totalMarksAwarded, percentage, passed }
+    }).catch(() => {});
+
+    achievementService.checkAndAwardBadges(studentId, 'FIRST_ASSESSMENT').catch(() => {});
+    goalService.incrementGoalProgress(studentId, 'ASSESSMENT', 1).catch(() => {});
+
+    // Record mistakes for incorrect questions
+    for (const q of questions) {
+      const gAns = gradedAnswers.find(a => a.questionId.toString() === q._id.toString());
+      if (gAns && !gAns.isCorrect) {
+        Mistake.create({
+          studentId,
+          sourceType: 'ASSESSMENT',
+          sourceId: attempt._id,
+          topic: q.topic || 'General',
+          questionId: q._id,
+          mistakeType: 'INCORRECT_CHOICE',
+          promptSnippet: (q.question || '').slice(0, 150),
+          studentAnswer: gAns.selectedAnswers,
+          explanation: q.explanation || 'Review topic core concepts.',
+          resolved: false
+        }).catch(() => {});
+
+        // Schedule spaced review for struggling topic
+        if (q.topic) {
+          SpacedReview.findOneAndUpdate(
+            { studentId, topic: q.topic },
+            {
+              $set: {
+                performance: 'needs_practice',
+                nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000)
+              },
+              $inc: { reviewCount: 1 }
+            },
+            { upsert: true, new: true }
+          ).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    // Graceful fallback
+  }
+
   return {
     attempt,
     result: {

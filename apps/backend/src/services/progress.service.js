@@ -109,6 +109,29 @@ const completeLesson = async (studentId, lessonId) => {
 
   await enrollment.save();
 
+  // Phase 11: Learning Intelligence event hooks (graceful, non-blocking)
+  try {
+    const learningEventService = require('./intelligence/event.service');
+    const achievementService = require('./intelligence/achievement.service');
+    const goalService = require('./intelligence/goal.service');
+
+    learningEventService.recordEvent({
+      studentId,
+      eventType: 'LESSON_COMPLETED',
+      resourceType: 'Lesson',
+      resourceId: lessonId,
+      metadata: { courseId: lesson.courseId }
+    }).catch(() => {});
+
+    achievementService.checkAndAwardBadges(studentId, 'FIRST_LESSON').catch(() => {});
+    if (isCourseCompleted) {
+      achievementService.checkAndAwardBadges(studentId, 'COURSE_COMPLETED').catch(() => {});
+    }
+    goalService.incrementGoalProgress(studentId, 'COURSE_COMPLETION', 1).catch(() => {});
+  } catch (err) {
+    // Non-blocking fallback
+  }
+
   return {
     progress,
     progressPercentage,

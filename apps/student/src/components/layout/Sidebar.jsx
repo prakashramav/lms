@@ -21,6 +21,12 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  RotateCcw,
+  Target,
+  Brain,
+  TrendingUp,
+  Bookmark
 } from 'lucide-react';
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
@@ -48,14 +54,16 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
   const mainNav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Daily Plan', href: '/daily-plan', icon: Calendar },
     { name: 'Learn', href: '/learning', icon: BookOpen },
-    { name: 'Assessments', href: '/assessments', icon: Award },
     { name: 'Practice', href: '/practice', icon: Terminal },
-    { name: 'Projects', href: '/projects', icon: Layers },
+    { name: 'Mistake Book', href: '/mistakes', icon: Bookmark },
+    { name: 'Revision', href: '/revision', icon: RotateCcw },
+    { name: 'Skills Graph', href: '/skills', icon: Brain },
+    { name: 'Goals', href: '/goals', icon: Target },
+    { name: 'Weekly Review', href: '/weekly-review', icon: TrendingUp },
+    { name: 'Assessments', href: '/assessments', icon: Award },
     { name: 'AI Tutor', href: '/ai-tutor', icon: Sparkles },
-    { name: 'Interview', href: '/interview', icon: Cpu },
-    { name: 'Career', href: '/career', icon: Compass },
-    { name: 'Jobs', href: '/jobs', icon: Briefcase },
   ];
 
   const secondaryNav = [

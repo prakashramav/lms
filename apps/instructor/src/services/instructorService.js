@@ -470,3 +470,17 @@ export async function markNotificationRead(accessToken, notificationId = 'all') 
   });
   return handleResponse(res, 'Failed to update notification');
 }
+
+// ==========================================
+// PHASE 11: COURSE INTELLIGENCE
+// ==========================================
+
+export async function fetchCourseIntelligence(accessToken, courseId) {
+  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/intelligence`, {
+    method: 'GET',
+    headers: getHeaders(accessToken),
+    cache: 'no-store',
+  });
+  return handleResponse(res, 'Failed to fetch course intelligence');
+}
+
