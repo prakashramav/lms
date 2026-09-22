@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const LESSON_TYPES = ['VIDEO', 'ARTICLE', 'READING', 'RESOURCE'];
+const LESSON_TYPES = ['VIDEO', 'ARTICLE', 'READING', 'RESOURCE', 'QUIZ', 'CODE'];
 
 const resourceSchema = new mongoose.Schema(
   {
