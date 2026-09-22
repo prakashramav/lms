@@ -104,6 +104,23 @@ const lessonSchema = new mongoose.Schema(
   }
 );
 
+// Auto-generate slug and fallback moduleId if not provided
+lessonSchema.pre('validate', function (next) {
+  if (!this.slug && this.title) {
+    this.slug =
+      this.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `lesson-${Date.now()}`;
+  }
+  if (!this.moduleId) {
+    this.moduleId = new mongoose.Types.ObjectId();
+  }
+  next();
+});
+
 // Compound indexes for sequential ordering and retrieval
 lessonSchema.index({ courseId: 1, moduleId: 1, order: 1 });
 lessonSchema.index({ courseId: 1, order: 1 });

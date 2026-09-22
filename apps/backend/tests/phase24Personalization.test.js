@@ -6,6 +6,7 @@ const { User } = require('../src/models/user.model');
 const { Course } = require('../src/models/course.model');
 const { Enrollment } = require('../src/models/enrollment.model');
 const { Lesson } = require('../src/models/lesson.model');
+const Module = require('../src/models/module.model');
 const { Skill, StudentSkill } = require('../src/models/skill.model');
 const { generateAccessToken } = require('../src/services/token.service');
 
@@ -51,11 +52,19 @@ describe('Phase 24 AI Personalization, Adaptive Learning & Intelligence Test Sui
       instructor: new mongoose.Types.ObjectId(),
     });
 
+    const sampleModule = await Module.create({
+      courseId: sampleCourse._id,
+      title: 'State Architecture',
+      order: 1,
+    });
+
     sampleLesson = await Lesson.create({
       title: 'Advanced State Management with Zustand',
+      slug: 'advanced-state-management-with-zustand',
       courseId: sampleCourse._id,
+      moduleId: sampleModule._id,
       order: 1,
-      durationMinutes: 25,
+      duration: 25,
       type: 'VIDEO',
       isPublished: true,
     });

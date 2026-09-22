@@ -109,6 +109,7 @@ describe('Course Publishing & Student Visibility Suite', () => {
       courseId: course._id,
       moduleId: moduleDoc._id,
       title: 'Lesson 1.1: Consistency and Replication',
+      slug: 'lesson-1-1-consistency-and-replication',
       order: 1,
       isPublished: true,
       content: 'Detailed explanation of CAP theorem and state machine replication.',

@@ -18,7 +18,7 @@ export default function NotFound() {
             Page Not Found
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            The page or learning resource you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+            The page or learning resource you are looking for doesn&apos;t exist, has been moved, or is temporarily unavailable.
           </p>
         </div>
 
