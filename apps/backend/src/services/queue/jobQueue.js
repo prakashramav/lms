@@ -3,7 +3,8 @@
  * Phase 15 — Queue System & Dead Letter Queue (Sections 28 - 31)
  */
 
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+const uuidv4 = () => (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
 const observability = require('../observability/observability.service');
 
 const JOB_STATES = {
