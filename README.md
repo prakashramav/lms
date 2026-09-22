@@ -52,12 +52,14 @@ A production-ready full-stack education platform built with modern web architect
 ## 3. Technology Stack
 
 - **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS, Monaco Code Editor, Lucide Icons
-- **Backend API**: Node.js, Express.js 4, Mongoose 8 ODM
-- **Database**: MongoDB (Replica set support, compound indexes, connection pooling)
-- **Cache & Queue**: Redis (TTL-based catalog caching and execution queue)
+- **Backend API**: Node.js, Express.js 4, Mongoose 8 ODM, REST API v1
+- **Database**: MongoDB (Replica set support, compound indexes, connection pooling max 50)
+- **Cache & Queue**: Redis + in-memory background job queue with Dead Letter Queue (DLQ) and bounded exponential retries
 - **Execution Sandbox**: Judge0 / Isolated container runner with CPU & memory caps
-- **AI Tutoring**: Google Gemini (`gemini-1.5-flash`), OpenAI, with intelligent deterministic mock fallback
-- **Security**: Helmet, bcrypt (10 salt rounds), JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment protection, tiered rate limiters
+- **Resilient AI Router & AI Tutor 2.0**: Multi-provider fallback (Gemini / OpenAI / Mock), 3-strike circuit breaker, Socratic dialogue, Teach-back evaluation, and progressive hints
+- **Learning Intelligence Engine**: Structured knowledge profiles with multi-modal evidence, prerequisite gap analysis, adaptive diagnostic testing, spaced review, and mistake clustering
+- **Security & Reliability**: Helmet, bcrypt, JWT access + HttpOnly refresh cookies, NoSQL injection sanitization, Mass assignment defense, Idempotency middleware, Resource-level IDOR validation, tiered rate limiters, and audited data repair
+- **Observability & Institutional Governance**: Request ID propagation, `/metrics` telemetry, automated backup & restore disaster recovery, student cohort tracking, and data quality integrity scanners
 
 ---
 
@@ -177,3 +179,28 @@ npm run test:backend
 - [Database Architecture & Index Audit](docs/database.md)
 - [API v1 REST Specification](docs/api.md)
 - [OpenAPI 3.0 YAML Contract](docs/openapi.yaml)
+- [Mentorship System Architecture](docs/mentorship/mentorship-architecture.md)
+- [Event System & Lifecycle](docs/events/event-architecture.md)
+- [Community Architecture & Moderation](docs/community/community-architecture.md)
+- [Learning Marketplace Architecture](docs/marketplace/marketplace-architecture.md)
+- [Platform Ecosystem Capability Map](docs/platform/ecosystem-map.md)
+- [Phase 22 Launch Validation Report](docs/releases/phase-22-validation.md)
+- [Production Architecture & Modular Monolith](docs/architecture/production-architecture.md)
+- [Production Deployment Strategy](docs/deployment/production-deployment.md)
+- [Production Rollback Runbook](docs/deployment/rollback.md)
+- [CI/CD Pipeline Specification](docs/deployment/cicd.md)
+- [Production Database Architecture](docs/database/production-database.md)
+- [Monitoring & Observability Guide](docs/operations/monitoring.md)
+- [Incident Response Playbook](docs/operations/incident-response.md)
+- [Scaling & Capacity Strategy](docs/operations/scaling.md)
+- [Master Operational Runbook](docs/operations/runbook.md)
+- [Role-Based Access Control (RBAC) Matrix](docs/security/rbac-matrix.md)
+- [Data Flow & Information Security](docs/security/data-flow.md)
+- [Enterprise Threat Model (STRIDE)](docs/security/threat-model.md)
+- [Load Testing & Benchmark Report](docs/testing/load-test-report.md)
+- [Security Penetration Audit Report](docs/testing/security-test-report.md)
+- [Performance & Optimization Report](docs/testing/performance-report.md)
+- [Production Readiness Checklist](docs/releases/production-readiness.md)
+- [Phase 23 Launch Validation Report](docs/releases/phase-23-validation.md)
+
+

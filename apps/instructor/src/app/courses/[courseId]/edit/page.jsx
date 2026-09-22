@@ -12,6 +12,7 @@ import {
   publishCourse,
   unpublishCourse,
   archiveCourse,
+  deleteCourse,
   fetchCourseAnalytics,
   fetchStudents,
 } from '../../../../services/instructorService';
@@ -37,6 +38,8 @@ import {
   AlertTriangle,
   Layers,
   ChevronRight,
+  Trash2,
+  X,
 } from 'lucide-react';
 
 const TABS = [
@@ -63,6 +66,25 @@ export default function CourseEditorPage() {
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved', 'error'
   const [feedback, setFeedback] = useState(null);
 
+  // Deletion modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteInputText, setDeleteInputText] = useState('');
+  const [isDeletingCourse, setIsDeletingCourse] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState(null);
+
+  // Accessible escape key handling for delete modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isDeleteModalOpen && !isDeletingCourse) {
+        setIsDeleteModalOpen(false);
+        setDeleteInputText('');
+        setDeleteErrorMessage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDeleteModalOpen, isDeletingCourse]);
+
   // Form state for overview tab
   const [formData, setFormData] = useState({
     title: '',
@@ -81,25 +103,32 @@ export default function CourseEditorPage() {
   });
 
   const loadCourseData = async () => {
-    if (!accessToken || !courseId) return;
+    if (!accessToken || !courseId || courseId === 'undefined') return;
     setIsLoading(true);
     try {
       const data = await fetchCourseDetail(accessToken, courseId);
-      setCourse(data);
+      const courseObj = data?.course || data;
+      const mergedCourse = {
+        ...courseObj,
+        modules: data?.modules || courseObj?.modules || [],
+        resources: data?.resources || courseObj?.resources || [],
+        metrics: data?.metrics || courseObj?.metrics || {},
+      };
+      setCourse(mergedCourse);
       setFormData({
-        title: data.title || '',
-        slug: data.slug || '',
-        shortDescription: data.shortDescription || '',
-        description: data.description || '',
-        category: data.category || '',
-        level: data.level || 'Beginner',
-        language: data.language || 'English',
-        thumbnail: data.thumbnail || '',
-        banner: data.banner || '',
-        estimatedDuration: data.estimatedDuration || 10,
-        learningObjectives: (data.learningObjectives || []).join('\n'),
-        prerequisites: (data.prerequisites || []).join('\n'),
-        tags: (data.tags || []).join(', '),
+        title: mergedCourse.title || '',
+        slug: mergedCourse.slug || '',
+        shortDescription: mergedCourse.shortDescription || '',
+        description: mergedCourse.description || '',
+        category: mergedCourse.category || '',
+        level: mergedCourse.difficulty || mergedCourse.level || 'Beginner',
+        language: mergedCourse.language || 'English',
+        thumbnail: mergedCourse.thumbnail || '',
+        banner: mergedCourse.banner || '',
+        estimatedDuration: mergedCourse.duration || mergedCourse.estimatedDuration || 10,
+        learningObjectives: (mergedCourse.learningOutcomes || mergedCourse.learningObjectives || []).join('\n'),
+        prerequisites: (mergedCourse.requirements || mergedCourse.prerequisites || []).join('\n'),
+        tags: (mergedCourse.skills || mergedCourse.tags || []).join(', '),
       });
       setSaveStatus('saved');
     } catch (err) {
@@ -111,11 +140,16 @@ export default function CourseEditorPage() {
   };
 
   useEffect(() => {
+    if (courseId === 'undefined') {
+      router.replace('/courses');
+      return;
+    }
     loadCourseData();
   }, [accessToken, courseId]);
 
   // Lazy load tab specific data
   useEffect(() => {
+    if (!courseId || courseId === 'undefined') return;
     if (activeTab === 'analytics' && !analytics && accessToken) {
       fetchCourseAnalytics(accessToken, courseId)
         .then((res) => setAnalytics(res))
@@ -165,7 +199,11 @@ export default function CourseEditorPage() {
       };
 
       const updated = await updateCourse(accessToken, courseId, payload);
-      setCourse(updated);
+      const updatedCourseObj = updated?.course || updated;
+      setCourse((prev) => ({
+        ...prev,
+        ...updatedCourseObj,
+      }));
       setSaveStatus('saved');
       setFeedback({ type: 'success', message: 'Course overview updated successfully!' });
     } catch (err) {
@@ -181,7 +219,11 @@ export default function CourseEditorPage() {
     setFeedback(null);
     try {
       const updated = await publishCourse(accessToken, courseId);
-      setCourse(updated);
+      const updatedCourseObj = updated?.course || updated;
+      setCourse((prev) => ({
+        ...prev,
+        ...updatedCourseObj,
+      }));
       setFeedback({ type: 'success', message: 'Course published! Students can now access this course.' });
     } catch (err) {
       setFeedback({ type: 'error', message: err.message || 'Failed to publish course.' });
@@ -196,7 +238,11 @@ export default function CourseEditorPage() {
     setFeedback(null);
     try {
       const updated = await unpublishCourse(accessToken, courseId);
-      setCourse(updated);
+      const updatedCourseObj = updated?.course || updated;
+      setCourse((prev) => ({
+        ...prev,
+        ...updatedCourseObj,
+      }));
       setFeedback({ type: 'success', message: 'Course returned to Draft state.' });
     } catch (err) {
       setFeedback({ type: 'error', message: err.message || 'Failed to unpublish course.' });
@@ -216,6 +262,41 @@ export default function CourseEditorPage() {
       setIsSaving(false);
     }
   };
+
+  const handleDeleteCourse = async (e) => {
+    if (e) e.preventDefault();
+    if (deleteInputText.trim() !== (course?.title || '').trim()) return;
+    setIsDeletingCourse(true);
+    setDeleteErrorMessage(null);
+    try {
+      const targetId = course?._id || courseId;
+      await deleteCourse(accessToken, targetId);
+      setIsDeleteModalOpen(false);
+      router.push('/courses');
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+      setDeleteErrorMessage(err.message || 'Failed to delete course');
+      setIsDeletingCourse(false);
+    }
+  };
+
+  if (!courseId || courseId === 'undefined') {
+    return (
+      <InstructorLayout>
+        <div className="max-w-4xl mx-auto p-12 text-center text-slate-400 space-y-4">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+          <h2 className="text-xl font-bold text-white">Course Not Specified</h2>
+          <p className="text-sm text-slate-400">Invalid course identifier. Please select a course from your studio catalog.</p>
+          <Link
+            href="/courses"
+            className="inline-block px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition"
+          >
+            Back to Courses
+          </Link>
+        </div>
+      </InstructorLayout>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -734,17 +815,154 @@ export default function CourseEditorPage() {
 
             {/* DANGER ZONE */}
             <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-900/30 space-y-4">
-              <h3 className="text-sm font-bold text-rose-400">Danger Zone</h3>
+              <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Danger Zone</span>
+              </h3>
               <p className="text-xs text-slate-400">
-                Archiving will hide the course from discovery. Existing student enrollments will remain protected.
+                Manage destructive operations for this course. Archiving hides the course from the catalog while preserving enrollments. Permanent deletion purges all modules, lessons, and assets.
               </p>
-              <button
-                onClick={handleArchive}
-                disabled={course.status === 'ARCHIVED' || isSaving}
-                className="px-4 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition disabled:opacity-40"
-              >
-                Archive Course
-              </button>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleArchive}
+                  disabled={course.status === 'ARCHIVED' || isSaving}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+                >
+                  {course.status === 'ARCHIVED' ? 'Course is Archived' : 'Archive Course'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteInputText('');
+                    setDeleteErrorMessage(null);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md shadow-rose-600/20"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Course Permanently</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DELETE CONFIRMATION MODAL */}
+        {isDeleteModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-course-modal-title"
+          >
+            <div className="w-full max-w-lg rounded-2xl bg-slate-900 border border-rose-900/60 shadow-2xl overflow-hidden animate-in zoom-in-95">
+              {/* MODAL HEADER */}
+              <div className="p-6 bg-rose-950/40 border-b border-rose-900/40 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 id="delete-course-modal-title" className="text-base font-bold text-white">
+                      Delete Course Permanently?
+                    </h3>
+                    <p className="text-xs text-rose-300/80 mt-0.5 font-mono truncate max-w-xs sm:max-w-sm">
+                      {course?.title}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isDeletingCourse) {
+                      setIsDeleteModalOpen(false);
+                      setDeleteInputText('');
+                      setDeleteErrorMessage(null);
+                    }
+                  }}
+                  disabled={isDeletingCourse}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+                  aria-label="Close dialog"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* MODAL BODY */}
+              <div className="p-6 space-y-4">
+                <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-900/30 space-y-2 text-xs text-rose-200">
+                  <p className="font-semibold text-rose-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Warning: This action is destructive and irreversible.</span>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] leading-relaxed">
+                    <li>All modules ({course?.modules?.length || 0}) and lessons will be permanently deleted.</li>
+                    <li>Course quizzes, exercises, and attached learning resources will be removed.</li>
+                    <li>Enrolled student progress telemetry for this course will be deleted.</li>
+                    <li>AI RAG knowledge embeddings will be purged immediately.</li>
+                    <li className="text-emerald-400">
+                      <strong>Certificate Preservation:</strong> Any certificates already awarded to students remain valid and verifiable.
+                    </li>
+                  </ul>
+                </div>
+
+                {deleteErrorMessage && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                    {deleteErrorMessage}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    To verify, type <span className="font-mono text-rose-400 font-bold select-all">{course?.title}</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteInputText}
+                    onChange={(e) => setDeleteInputText(e.target.value)}
+                    placeholder="Enter course name exactly to confirm"
+                    disabled={isDeletingCourse}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* MODAL FOOTER */}
+              <div className="p-4 bg-slate-950/60 border-t border-slate-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setDeleteInputText('');
+                    setDeleteErrorMessage(null);
+                  }}
+                  disabled={isDeletingCourse}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteCourse}
+                  disabled={deleteInputText.trim() !== (course?.title || '').trim() || isDeletingCourse}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition disabled:opacity-30 disabled:hover:bg-rose-600 flex items-center gap-2 shadow-lg shadow-rose-600/20"
+                >
+                  {isDeletingCourse ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting Course...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Course Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

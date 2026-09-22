@@ -17,6 +17,10 @@ function AdminLoginForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rawRedirect = searchParams.get('redirect');
+  const safeRedirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('\\')
+    ? rawRedirect
+    : '/dashboard';
 
   useEffect(() => {
     if (searchParams.get('expired') === '1') {
@@ -31,7 +35,7 @@ function AdminLoginForm() {
 
     try {
       await login(email, password);
-      router.push('/dashboard');
+      router.push(safeRedirect);
     } catch (err) {
       setLocalError(err.message || 'Access denied. Administrative authentication failed.');
     } finally {

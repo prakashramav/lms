@@ -132,7 +132,7 @@ class RecommendationService {
 
     // SIGNAL 4: Fallback Discovery Course
     if (recommendations.length < 3) {
-      const topCourse = await Course.findOne({ isPublished: true, status: 'PUBLISHED' }).sort({ createdAt: -1 });
+      const topCourse = await Course.findOne({ isPublished: true, status: 'PUBLISHED', isDeleted: { $ne: true } }).sort({ createdAt: -1 });
       if (topCourse && (!enrollment || enrollment.courseId?._id.toString() !== topCourse._id.toString())) {
         recommendations.push({
           studentId,

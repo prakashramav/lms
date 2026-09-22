@@ -10,6 +10,7 @@ import {
   unpublishCourse,
   archiveCourse,
   duplicateCourse,
+  deleteCourse,
 } from '../../services/instructorService';
 import {
   BookOpen,
@@ -32,6 +33,7 @@ import {
   Sparkles,
   ChevronRight,
   Trash2,
+  X,
 } from 'lucide-react';
 
 export default function CoursesListPage() {
@@ -45,6 +47,24 @@ export default function CoursesListPage() {
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
+  // Course deletion state
+  const [courseToDelete, setCourseToDelete] = useState(null);
+  const [deleteInputText, setDeleteInputText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && courseToDelete && !isDeleting) {
+        setCourseToDelete(null);
+        setDeleteInputText('');
+        setDeleteErrorMessage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [courseToDelete, isDeleting]);
+
   const loadCourses = async () => {
     if (!accessToken) return;
     setIsLoading(true);
@@ -54,7 +74,8 @@ export default function CoursesListPage() {
       if (statusFilter !== 'all') query.status = statusFilter;
       if (searchQuery.trim()) query.search = searchQuery.trim();
       const res = await fetchCourses(accessToken, query);
-      setCourses(res.courses || []);
+      const coursesList = res?.courses || res?.items || (Array.isArray(res) ? res : []);
+      setCourses(coursesList);
     } catch (err) {
       console.error('Error fetching courses:', err);
       setError(err.message || 'Failed to load courses');
@@ -129,6 +150,24 @@ export default function CoursesListPage() {
     } finally {
       setActionLoadingId(null);
       setActiveMenuId(null);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!courseToDelete) return;
+    if (deleteInputText.trim() !== (courseToDelete.title || '').trim()) return;
+    setIsDeleting(true);
+    setDeleteErrorMessage(null);
+    try {
+      await deleteCourse(accessToken, courseToDelete._id);
+      setFeedback({ type: 'success', message: `Course "${courseToDelete.title}" deleted permanently.` });
+      setCourses((prev) => prev.filter((c) => c._id !== courseToDelete._id));
+      setCourseToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+      setDeleteErrorMessage(err.message || 'Failed to delete course');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -347,6 +386,18 @@ export default function CoursesListPage() {
                                 <span>Archive Course</span>
                               </button>
                             )}
+                            <button
+                              onClick={() => {
+                                setCourseToDelete(course);
+                                setDeleteInputText('');
+                                setDeleteErrorMessage(null);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 flex items-center gap-2 text-left border-t border-slate-800/80"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete Course</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -402,6 +453,123 @@ export default function CoursesListPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* DELETE CONFIRMATION MODAL */}
+        {courseToDelete && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="catalog-delete-course-title"
+          >
+            <div className="w-full max-w-lg rounded-2xl bg-slate-900 border border-rose-900/60 shadow-2xl overflow-hidden animate-in zoom-in-95">
+              {/* MODAL HEADER */}
+              <div className="p-6 bg-rose-950/40 border-b border-rose-900/40 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 id="catalog-delete-course-title" className="text-base font-bold text-white">
+                      Delete Course Permanently?
+                    </h3>
+                    <p className="text-xs text-rose-300/80 mt-0.5 font-mono truncate max-w-xs sm:max-w-sm">
+                      {courseToDelete.title}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isDeleting) {
+                      setCourseToDelete(null);
+                      setDeleteInputText('');
+                      setDeleteErrorMessage(null);
+                    }
+                  }}
+                  disabled={isDeleting}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+                  aria-label="Close dialog"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* MODAL BODY */}
+              <div className="p-6 space-y-4">
+                <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-900/30 space-y-2 text-xs text-rose-200">
+                  <p className="font-semibold text-rose-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Warning: This operation will permanently remove all course content.</span>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] leading-relaxed">
+                    <li>Modules, lessons, and associated learning materials will be deleted.</li>
+                    <li>Student progress telemetry on this course will be cleared.</li>
+                    <li>AI search embeddings will be purged.</li>
+                    <li className="text-emerald-400">
+                      <strong>Historical Records:</strong> Issued student certificates remain verifiable.
+                    </li>
+                  </ul>
+                </div>
+
+                {deleteErrorMessage && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                    {deleteErrorMessage}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    To confirm, type <span className="font-mono text-rose-400 font-bold select-all">{courseToDelete.title}</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteInputText}
+                    onChange={(e) => setDeleteInputText(e.target.value)}
+                    placeholder="Enter course name exactly to confirm"
+                    disabled={isDeleting}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* MODAL FOOTER */}
+              <div className="p-4 bg-slate-950/60 border-t border-slate-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCourseToDelete(null);
+                    setDeleteInputText('');
+                    setDeleteErrorMessage(null);
+                  }}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={deleteInputText.trim() !== (courseToDelete.title || '').trim() || isDeleting}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition disabled:opacity-30 disabled:hover:bg-rose-600 flex items-center gap-2 shadow-lg shadow-rose-600/20"
+                >
+                  {isDeleting ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

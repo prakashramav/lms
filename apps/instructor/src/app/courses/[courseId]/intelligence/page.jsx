@@ -44,7 +44,7 @@ export default function CourseIntelligencePage() {
         fetchCourseDetail(accessToken, courseId).catch(() => null),
       ]);
       setIntelligence(intelData);
-      setCourse(courseData);
+      setCourse(courseData?.course || courseData);
     } catch (err) {
       setError(err.message || 'Failed to load course intelligence data.');
     } finally {

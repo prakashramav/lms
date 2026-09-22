@@ -1,15 +1,18 @@
 const crypto = require('crypto');
 const { User } = require('../models/user.model');
 const tokenService = require('../services/token.service');
+const { logSecurityEvent, SECURITY_EVENTS } = require('../services/securityLogger');
 const env = require('../config/env');
 
 /**
  * Register a new Student
+ * Sets 7-day HTTP-only auth cookie and returns sanitized user object (no raw tokens in body)
  * @route POST /api/v1/auth/register
  */
 const register = async (req, res, next) => {
+  const requestId = req.id || req.requestId;
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role, requestedRole, accountType } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
@@ -18,33 +21,50 @@ const register = async (req, res, next) => {
         success: false,
         message: 'An account with this email address already exists.',
         errorCode: 'EMAIL_ALREADY_EXISTS',
+        requestId,
       });
     }
 
-    // Role MUST default to STUDENT; public cannot self-assign INSTRUCTOR or ADMIN
+    // Role defaults to STUDENT; allow INSTRUCTOR if explicitly requested; protect against ADMIN/SUPER_ADMIN escalation
+    const candidateRole = role || requestedRole || accountType;
+    const assignedRole = (candidateRole && candidateRole.toString().toUpperCase().trim() === 'INSTRUCTOR') ? 'INSTRUCTOR' : 'STUDENT';
+
     const user = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password,
-      role: 'STUDENT',
+      role: assignedRole,
       status: 'ACTIVE',
       isEmailVerified: false,
     });
 
-    // Generate tokens
-    const accessToken = tokenService.generateAccessToken(user);
-    const { rawToken: refreshToken, expiresAt } = await tokenService.createRefreshToken(user._id, req);
+    // Generate 7-day token and set HTTP-only cookie
+    const authToken = tokenService.generateAuthToken(user);
+    tokenService.setAuthCookie(res, authToken, undefined, user.role);
 
-    tokenService.setRefreshTokenCookie(res, refreshToken, expiresAt);
+    // Persist refresh session
+    const { rawToken: refreshToken, expiresAt } = await tokenService.createRefreshToken(user._id, req, user.role);
+    tokenService.setRefreshTokenCookie(res, refreshToken, expiresAt, user.role);
+
+    // Security logging
+    await logSecurityEvent({
+      event: SECURITY_EVENTS.LOGIN_SUCCESS,
+      userId: user._id,
+      role: user.role,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      requestId,
+      details: { method: 'register' },
+      success: true,
+    });
 
     res.status(201).json({
       success: true,
       message: 'Account registered successfully.',
       data: {
         user: user.toJSON(),
-        accessToken,
-        refreshToken,
       },
+      user: user.toJSON(),
     });
   } catch (error) {
     next(error);
@@ -53,29 +73,63 @@ const register = async (req, res, next) => {
 
 /**
  * Login user (Student, Instructor, or Admin)
+ * Sets 7-day HTTP-only auth cookie and returns sanitized user object (no raw tokens in body)
  * @route POST /api/v1/auth/login
  */
 const login = async (req, res, next) => {
+  const requestId = req.id || req.requestId;
   try {
     const { email, password, expectedRole } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required.',
+        errorCode: 'VALIDATION_ERROR',
+        requestId,
+      });
+    }
 
     // Retrieve user including password hash
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
 
     if (!user || !(await user.comparePassword(password))) {
+      await logSecurityEvent({
+        event: SECURITY_EVENTS.LOGIN_FAILED,
+        role: expectedRole || 'ANONYMOUS',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        requestId,
+        details: { emailAttempted: email.toLowerCase().trim(), reason: 'Invalid credentials' },
+        success: false,
+      });
+
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.',
         errorCode: 'AUTH_INVALID_CREDENTIALS',
+        requestId,
       });
     }
 
     // Check account status
     if (user.status !== 'ACTIVE') {
+      await logSecurityEvent({
+        event: SECURITY_EVENTS.UNAUTHORIZED_ACCESS,
+        userId: user._id,
+        role: user.role,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        requestId,
+        details: { status: user.status, reason: 'Account not active' },
+        success: false,
+      });
+
       return res.status(403).json({
         success: false,
         message: `Account is ${user.status.toLowerCase()}. Please contact support.`,
         errorCode: 'ACCOUNT_INACTIVE',
+        requestId,
       });
     }
 
@@ -87,10 +141,22 @@ const login = async (req, res, next) => {
           : user.role === expectedRole;
 
       if (!isAuthorized) {
+        await logSecurityEvent({
+          event: SECURITY_EVENTS.UNAUTHORIZED_ACCESS,
+          userId: user._id,
+          role: user.role,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          requestId,
+          details: { expectedRole, actualRole: user.role },
+          success: false,
+        });
+
         return res.status(403).json({
           success: false,
           message: `Access denied. Your account (${user.role}) is not authorized to sign into the ${expectedRole} portal.`,
           errorCode: 'ROLE_MISMATCH',
+          requestId,
         });
       }
     }
@@ -99,20 +165,33 @@ const login = async (req, res, next) => {
     user.lastLoginAt = new Date();
     await user.save();
 
-    // Generate tokens
-    const accessToken = tokenService.generateAccessToken(user);
-    const { rawToken: refreshToken, expiresAt } = await tokenService.createRefreshToken(user._id, req);
+    // Generate 7-day authentication token and set HTTP-only cookie
+    const authToken = tokenService.generateAuthToken(user);
+    tokenService.setAuthCookie(res, authToken, undefined, user.role);
 
-    tokenService.setRefreshTokenCookie(res, refreshToken, expiresAt);
+    // Create and persist refresh token session
+    const { rawToken: refreshToken, expiresAt } = await tokenService.createRefreshToken(user._id, req, user.role);
+    tokenService.setRefreshTokenCookie(res, refreshToken, expiresAt, user.role);
+
+    // Security event log
+    await logSecurityEvent({
+      event: SECURITY_EVENTS.LOGIN_SUCCESS,
+      userId: user._id,
+      role: user.role,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      requestId,
+      details: { method: 'password' },
+      success: true,
+    });
 
     res.status(200).json({
       success: true,
       message: 'Authentication successful.',
       data: {
         user: user.toJSON(),
-        accessToken,
-        refreshToken,
       },
+      user: user.toJSON(),
     });
   } catch (error) {
     next(error);
@@ -120,10 +199,11 @@ const login = async (req, res, next) => {
 };
 
 /**
- * Rotate Refresh Token
+ * Rotate Refresh Token & Renew 7-Day Session Cookie
  * @route POST /api/v1/auth/refresh
  */
 const refresh = async (req, res, next) => {
+  const requestId = req.id || req.requestId;
   try {
     const rawToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
 
@@ -132,6 +212,7 @@ const refresh = async (req, res, next) => {
         success: false,
         message: 'Refresh token not provided.',
         errorCode: 'REFRESH_TOKEN_REQUIRED',
+        requestId,
       });
     }
 
@@ -139,38 +220,46 @@ const refresh = async (req, res, next) => {
     try {
       rotationResult = await tokenService.rotateRefreshToken(rawToken, req);
     } catch (err) {
+      tokenService.clearAuthCookie(res);
       tokenService.clearRefreshTokenCookie(res);
       return res.status(401).json({
         success: false,
         message: 'Refresh token is expired or invalid.',
         errorCode: 'INVALID_REFRESH_TOKEN',
+        requestId,
       });
     }
 
     const user = await User.findById(rotationResult.userId);
     if (!user || user.status !== 'ACTIVE') {
+      tokenService.clearAuthCookie(res);
       tokenService.clearRefreshTokenCookie(res);
       return res.status(403).json({
         success: false,
         message: 'Account is no longer active.',
         errorCode: 'ACCOUNT_INACTIVE',
+        requestId,
       });
     }
 
-    const newAccessToken = tokenService.generateAccessToken(user);
+    // Reissue 7-day HTTP-only auth cookie
+    const newAuthToken = tokenService.generateAuthToken(user);
+    tokenService.setAuthCookie(res, newAuthToken, undefined, user.role);
+
     tokenService.setRefreshTokenCookie(
       res,
       rotationResult.newRefreshToken.rawToken,
-      rotationResult.newRefreshToken.expiresAt
+      rotationResult.newRefreshToken.expiresAt,
+      user.role
     );
 
     res.status(200).json({
       success: true,
       message: 'Session refreshed successfully.',
       data: {
-        accessToken: newAccessToken,
-        refreshToken: rotationResult.newRefreshToken.rawToken,
+        user: user.toJSON(),
       },
+      user: user.toJSON(),
     });
   } catch (error) {
     next(error);
@@ -179,15 +268,31 @@ const refresh = async (req, res, next) => {
 
 /**
  * Logout
+ * Clears authentication and refresh cookies, invalidates session in DB
  * @route POST /api/v1/auth/logout
  */
 const logout = async (req, res, next) => {
+  const requestId = req.id || req.requestId;
   try {
     const rawToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
     if (rawToken) {
       await tokenService.revokeRefreshToken(rawToken);
     }
 
+    if (req.user) {
+      await logSecurityEvent({
+        event: SECURITY_EVENTS.LOGOUT,
+        userId: req.user._id,
+        role: req.user.role,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        requestId,
+        details: { action: 'user_logout' },
+        success: true,
+      });
+    }
+
+    tokenService.clearAuthCookie(res);
     tokenService.clearRefreshTokenCookie(res);
 
     res.status(200).json({
@@ -201,14 +306,17 @@ const logout = async (req, res, next) => {
 
 /**
  * Get current authenticated user
+ * Source of truth for frontend session initialization
  * @route GET /api/v1/auth/me
  */
 const getMe = async (req, res) => {
+  const userJson = req.user.toJSON();
   res.status(200).json({
     success: true,
     data: {
-      user: req.user.toJSON(),
+      user: userJson,
     },
+    user: userJson,
   });
 };
 

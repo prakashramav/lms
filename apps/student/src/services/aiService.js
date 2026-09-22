@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 async function request(endpoint, options = {}, token) {
   const headers = {
     'Content-Type': 'application/json',
+    'X-Portal': 'student',
     ...(options.headers || {}),
   };
 
@@ -69,6 +70,7 @@ export const aiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Portal': 'student',
           Authorization: `Bearer ${token}`,
         },
         credentials: 'include',

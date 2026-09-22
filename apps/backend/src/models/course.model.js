@@ -79,12 +79,18 @@ const courseSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: COURSE_STATUSES,
+      uppercase: true,
       default: 'DRAFT',
       index: true,
     },
     isPublished: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+    isPublic: {
+      type: Boolean,
+      default: true,
       index: true,
     },
     featured: {
@@ -118,6 +124,11 @@ const courseSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    publishedByRole: {
+      type: String,
+      enum: ['instructor', 'admin', 'INSTRUCTOR', 'ADMIN', null],
+      default: null,
+    },
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -139,6 +150,24 @@ const courseSchema = new mongoose.Schema(
         resolved: { type: Boolean, default: false },
       },
     ],
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    deletionReason: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -155,9 +184,36 @@ courseSchema.index({
   category: 'text',
 });
 
-// Category and status compound query index
-courseSchema.index({ status: 1, category: 1, level: 1 });
-courseSchema.index({ instructorId: 1, status: 1 });
+// Catalog and querying compound indexes
+courseSchema.index({ isPublished: 1, status: 1, category: 1 });
+courseSchema.index({ status: 1, publishedAt: -1 });
+courseSchema.index({ status: 1, category: 1 });
+courseSchema.index({ slug: 1, status: 1 });
+courseSchema.index({ isDeleted: 1, isPublished: 1, status: 1 });
+courseSchema.index({ instructor: 1, status: 1 });
+courseSchema.index({ isDeleted: 1, instructor: 1 });
+
+// Query hook to automatically exclude soft-deleted courses unless explicitly included
+function filterOutDeleted(next) {
+  const filter = this.getFilter ? this.getFilter() : null;
+  if (filter && filter.includeDeleted === true) {
+    delete filter.includeDeleted;
+    return next();
+  }
+  if (!filter || filter.isDeleted === undefined) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+  next();
+}
+
+courseSchema.pre('find', filterOutDeleted);
+courseSchema.pre('findOne', filterOutDeleted);
+courseSchema.pre('countDocuments', filterOutDeleted);
+
+// Virtual for instructorId
+courseSchema.virtual('instructorId').get(function () {
+  return this.instructor?._id || this.instructor;
+});
 
 // Virtual populate for modules
 courseSchema.virtual('modules', {
@@ -167,6 +223,12 @@ courseSchema.virtual('modules', {
   options: { sort: { order: 1 } },
 });
 
+const activeCourseFilter = {
+  isDeleted: false,
+  status: 'PUBLISHED',
+  isPublished: true,
+};
+
 const Course = mongoose.model('Course', courseSchema);
 
 module.exports = {
@@ -174,4 +236,5 @@ module.exports = {
   COURSE_DIFFICULTIES,
   COURSE_STATUSES,
   PRICING_TYPES,
+  activeCourseFilter,
 };

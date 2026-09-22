@@ -1,16 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 async function request(endpoint, options = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('apex_admin_token') : null;
-
   const headers = {
     'Content-Type': 'application/json',
+    'X-Portal': 'admin',
     ...(options.headers || {}),
   };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
@@ -19,9 +14,9 @@ async function request(endpoint, options = {}) {
   });
 
   if (res.status === 401 && typeof window !== 'undefined') {
-    localStorage.removeItem('apex_admin_token');
-    localStorage.removeItem('apex_admin_user');
-    window.location.href = '/login?expired=1';
+    const currentPath = window.location.pathname + window.location.search;
+    const redirectParam = currentPath && currentPath !== '/login' ? `&redirect=${encodeURIComponent(currentPath)}` : '';
+    window.location.href = `/login?expired=1${redirectParam}`;
     throw new Error('Your administrative session has expired. Please sign in again.');
   }
 
@@ -99,6 +94,8 @@ export const adminApi = {
   archiveCourse: (id) => request(`/admin/courses/${id}/archive`, { method: 'POST' }),
   flagCourse: (id, data) =>
     request(`/admin/courses/${id}/flag`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteCourse: (id, data) =>
+    request(`/admin/courses/${id}`, { method: 'DELETE', body: data ? JSON.stringify(data) : undefined }),
 
   // Assessments & Coding
   getAssessments: (params) => request(`/admin/assessments${buildQuery(params)}`),

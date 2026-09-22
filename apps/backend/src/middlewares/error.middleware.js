@@ -47,6 +47,13 @@ const errorHandler = (err, req, res, next) => {
     message = 'Authentication token has expired';
   }
 
+  // Handle CORS & Origin Disallowed Errors
+  if (err.message && err.message.includes('Blocked by CORS policy')) {
+    statusCode = 403;
+    errorCode = 'CSRF_BLOCKED';
+    message = 'Forbidden: Cross-Origin / CSRF access disallowed';
+  }
+
   // Log error with context in non-test mode
   if (!env.isTest) {
     console.error(`[Error] [ReqID: ${requestId}] ${req.method} ${req.originalUrl}:`, {
@@ -61,18 +68,26 @@ const errorHandler = (err, req, res, next) => {
   if (env.isProduction && statusCode === 500) {
     return res.status(500).json({
       success: false,
-      error: 'Something went wrong.',
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Something went wrong.',
+        details: {},
+      },
       message: 'Something went wrong.',
       errorCode: 'INTERNAL_SERVER_ERROR',
-      code: 'INTERNAL_ERROR',
+      code: 'INTERNAL_SERVER_ERROR',
       requestId,
     });
   }
 
-  // Standard JSON response
+  // Standard JSON response satisfying Phase 15 Section 7 & 8 + backward compatibility
   res.status(statusCode).json({
     success: false,
-    error: message,
+    error: {
+      code: errorCode,
+      message,
+      details: err.details || {},
+    },
     message,
     errorCode,
     code: errorCode,

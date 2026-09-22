@@ -33,6 +33,18 @@ const mistakeSchema = new mongoose.Schema(
       ref: 'Problem',
       default: null,
     },
+    skillSlug: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
+    skillId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Skill',
+      default: null,
+      index: true,
+    },
     mistakeType: {
       type: String,
       enum: [
@@ -42,8 +54,27 @@ const mistakeSchema = new mongoose.Schema(
         'TIMEOUT',
         'INCORRECT_CHOICE',
         'EDGE_CASE',
+        'CONCEPT',
+        'SYNTAX',
+        'LOGIC',
+        'CARELESS',
+        'KNOWLEDGE_GAP',
+        'MISUNDERSTANDING',
       ],
       default: 'INCORRECT_CHOICE',
+    },
+    categoryConfidence: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH'],
+      default: 'MEDIUM',
+    },
+    categoryEvidence: {
+      type: String,
+      default: '',
+    },
+    repetitionCount: {
+      type: Number,
+      default: 1,
     },
     promptSnippet: {
       type: String,

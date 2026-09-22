@@ -75,11 +75,51 @@ const lessonSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    workspace: {
+      enabled: { type: Boolean, default: false },
+      type: {
+        type: String,
+        enum: [
+          'NONE',
+          'CODE_RUNNER',
+          'CLOUD_IDE',
+          'DATABASE_LAB',
+          'DATA_SCIENCE_LAB',
+          'DEEP_LEARNING_LAB',
+          'GENAI_LAB',
+        ],
+        default: 'NONE',
+      },
+      templateId: { type: String, default: null },
+      templateVersion: { type: String, default: '1.0' },
+      hardware: { type: String, enum: ['cpu', 'gpu'], default: 'cpu' },
+      starterFiles: { type: Array, default: [] },
+      tests: { type: Array, default: [] },
+      resourceProfile: { type: String, enum: ['BASIC', 'STANDARD', 'ML', 'GPU'], default: 'STANDARD' },
+      inactivityTimeoutMinutes: { type: Number, default: 30 },
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Auto-generate slug and fallback moduleId if not provided
+lessonSchema.pre('validate', function (next) {
+  if (!this.slug && this.title) {
+    this.slug =
+      this.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `lesson-${Date.now()}`;
+  }
+  if (!this.moduleId) {
+    this.moduleId = new mongoose.Types.ObjectId();
+  }
+  next();
+});
 
 // Compound indexes for sequential ordering and retrieval
 lessonSchema.index({ courseId: 1, moduleId: 1, order: 1 });

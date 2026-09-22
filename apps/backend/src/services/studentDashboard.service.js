@@ -33,7 +33,7 @@ const getStudentDashboardData = async (userId) => {
   let completedLessonsCount = 0;
   let totalLessonsCount = 0;
 
-  if (latestEnrollment && latestEnrollment.courseId) {
+  if (latestEnrollment && latestEnrollment.courseId && !latestEnrollment.courseId.isDeleted) {
     const course = latestEnrollment.courseId;
     totalLessonsCount = await Lesson.countDocuments({ courseId: course._id, isPublished: true });
     completedLessonsCount = await Progress.countDocuments({
@@ -178,8 +178,9 @@ const getStudentDashboardData = async (userId) => {
     },
   ];
 
-  // 7. Course recommendations: Fetch 3 featured published courses
-  const recommendedCourses = await Course.find({ isPublished: true, status: 'PUBLISHED' })
+  // 7. Course recommendations: Fetch 3 featured/recently published courses
+  const recommendedCourses = await Course.find({ isPublished: true, status: 'PUBLISHED', isDeleted: { $ne: true } })
+    .sort({ publishedAt: -1, createdAt: -1 })
     .limit(3)
     .lean();
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import GlobalSearchModal from './GlobalSearchModal';
@@ -28,6 +28,7 @@ import {
   Search,
   ChevronRight,
   Sparkles,
+  HardDrive,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -84,6 +85,7 @@ export default function AdminLayout({ children }) {
     { label: 'Analytics', href: '/analytics', icon: BarChart3, perm: 'analytics.read' },
     { label: 'AI Monitoring', href: '/ai-monitoring', icon: Cpu, perm: 'analytics.read' },
     { label: 'System Health', href: '/system-health', icon: Activity },
+    { label: 'Cloud Workspaces', href: '/workspaces', icon: HardDrive, perm: 'settings.manage' },
     { label: 'Audit Logs', href: '/audit-logs', icon: FileClock, perm: 'audit.read' },
     { label: 'Announcements', href: '/notifications', icon: Bell },
     { label: 'Platform Settings', href: '/settings', icon: Settings, perm: 'settings.manage' },

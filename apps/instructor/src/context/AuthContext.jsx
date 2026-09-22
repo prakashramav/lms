@@ -1,106 +1,114 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
-function isTokenExpired(token) {
-  if (!token || typeof token !== 'string') return true;
+const getStoredInstructorUser = () => {
+  if (typeof window === 'undefined') return null;
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-    const payload = JSON.parse(atob(parts[1]));
-    return payload.exp * 1000 < Date.now() + 30000;
-  } catch {
-    return true;
-  }
-}
+    const raw = localStorage.getItem('apex_instructor_user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && (parsed.role === 'INSTRUCTOR' || !parsed.role)) {
+      return parsed;
+    }
+  } catch {}
+  return null;
+};
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(getStoredInstructorUser);
+  const [isLoading, setIsLoading] = useState(() => !getStoredInstructorUser());
   const [error, setError] = useState(null);
 
-  const refreshAccessToken = async () => {
+  /**
+   * Fetch current faculty user profile via 7-day HTTP-only cookie
+   */
+  const refreshUser = useCallback(async () => {
     try {
-      const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('apex_instructor_refresh_token') : null;
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'instructor',
+        },
         credentials: 'include',
-        body: JSON.stringify({ refreshToken: storedRefreshToken || undefined }),
+        cache: 'no-store',
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.data?.accessToken) {
-        throw new Error(data.message || 'Session expired');
+      if (res.status === 401) {
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('apex_instructor_user');
+        }
+        return null;
       }
 
-      const newToken = data.data.accessToken;
-      setAccessToken(newToken);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('apex_instructor_token', newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem('apex_instructor_refresh_token', data.data.refreshToken);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Faculty session expired');
+      }
+
+      const userData = data.user || data.data?.user;
+      if (userData && userData.role && userData.role !== 'INSTRUCTOR') {
+        // Prevent cross-portal role pollution
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('apex_instructor_user');
         }
+        return null;
       }
-      return newToken;
+
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_instructor_user', JSON.stringify(userData));
+      }
+      return userData;
     } catch {
-      setUser(null);
-      setAccessToken(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('apex_instructor_token');
-        localStorage.removeItem('apex_instructor_refresh_token');
-        localStorage.removeItem('apex_instructor_user');
-      }
       return null;
     }
-  };
+  }, []);
 
+  // Initialize session exclusively via HTTP-only cookie
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        const storedToken = localStorage.getItem('apex_instructor_token');
-        const storedUser = localStorage.getItem('apex_instructor_user');
-        const storedRefresh = localStorage.getItem('apex_instructor_refresh_token');
-
-        if (storedToken && storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-
-          if (!isTokenExpired(storedToken)) {
-            setAccessToken(storedToken);
-            setUser(parsedUser);
-          } else if (storedRefresh) {
-            const refreshed = await refreshAccessToken();
-            if (refreshed) {
-              setUser(parsedUser);
-            }
-          } else {
-            localStorage.removeItem('apex_instructor_token');
-            localStorage.removeItem('apex_instructor_user');
-            localStorage.removeItem('apex_instructor_refresh_token');
-          }
+      // Purge any legacy localStorage tokens
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('apex_instructor_token');
+          localStorage.removeItem('apex_instructor_refresh_token');
+          localStorage.removeItem('accessToken');
+        } catch {
+          // Ignore storage errors
         }
-      } catch (e) {
-        console.error('Failed to restore instructor session:', e);
+      }
+
+      try {
+        await refreshUser();
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [refreshUser]);
 
+  /**
+   * Faculty Login
+   */
   const login = async (email, password) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'instructor',
+        },
         credentials: 'include',
         body: JSON.stringify({ email, password, expectedRole: 'INSTRUCTOR' }),
       });
@@ -110,14 +118,12 @@ export function AuthProvider({ children }) {
         throw new Error(data.message || 'Instructor sign in failed');
       }
 
-      setUser(data.data.user);
-      setAccessToken(data.data.accessToken);
-      localStorage.setItem('apex_instructor_token', data.data.accessToken);
-      if (data.data.refreshToken) {
-        localStorage.setItem('apex_instructor_refresh_token', data.data.refreshToken);
+      const userData = data.user || data.data?.user;
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_instructor_user', JSON.stringify(userData));
       }
-      localStorage.setItem('apex_instructor_user', JSON.stringify(data.data.user));
-      return data.data;
+      return userData;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -126,20 +132,59 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Faculty Registration
+   */
+  const register = async (name, email, password) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'instructor',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, password, role: 'INSTRUCTOR' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Faculty registration failed');
+      }
+
+      const userData = data.user || data.data?.user;
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_instructor_user', JSON.stringify(userData));
+      }
+      return userData;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Faculty Logout
+   */
   const logout = async () => {
     try {
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
+        headers: { 'X-Portal': 'instructor' },
         credentials: 'include',
       });
     } catch (e) {
       console.warn('Logout failed:', e);
     } finally {
       setUser(null);
-      setAccessToken(null);
-      localStorage.removeItem('apex_instructor_token');
-      localStorage.removeItem('apex_instructor_refresh_token');
-      localStorage.removeItem('apex_instructor_user');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('apex_instructor_user');
+      }
     }
   };
 
@@ -147,13 +192,14 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        accessToken,
+        accessToken: user ? (user._id || user.id || 'cookie-session') : null,
         isAuthenticated: !!user,
         isLoading,
         error,
         login,
+        register,
         logout,
-        refreshAccessToken,
+        refreshUser,
         setError,
       }}
     >

@@ -49,6 +49,8 @@ const enrollmentSchema = new mongoose.Schema(
 
 // Prevent duplicate active enrollments
 enrollmentSchema.index({ studentId: 1, courseId: 1 }, { unique: true });
+enrollmentSchema.index({ studentId: 1, status: 1 });
+enrollmentSchema.index({ courseId: 1, status: 1 });
 
 const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
 

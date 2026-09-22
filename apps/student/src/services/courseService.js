@@ -1,14 +1,31 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 /**
- * Helper to build auth headers
+ * Unified API fetch wrapper sending 7-day HTTP-only cookies
  */
-function getAuthHeaders(accessToken) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+async function apiFetch(endpoint, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Portal': 'student',
+    ...(options.headers || {}),
+  };
+
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    const currentPath = window.location.pathname + window.location.search;
+    const redirectParam = currentPath && currentPath !== '/login' ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+    window.location.href = `/login${redirectParam}`;
+    const error = new Error('Session expired');
+    error.status = 401;
+    throw error;
   }
-  return headers;
+
+  return res;
 }
 
 /**
@@ -23,9 +40,8 @@ export async function fetchCourses({ page = 1, limit = 12, search = '', category
   if (difficulty && difficulty !== 'all') params.set('difficulty', difficulty);
   if (sort) params.set('sort', sort);
 
-  const res = await fetch(`${API_BASE_URL}/courses?${params.toString()}`, {
+  const res = await apiFetch(`/courses?${params.toString()}`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
   });
 
@@ -39,10 +55,9 @@ export async function fetchCourses({ page = 1, limit = 12, search = '', category
 /**
  * Fetch course details by slug (includes curriculum structure)
  */
-export async function fetchCourseBySlug(slug, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/courses/${slug}`, {
+export async function fetchCourseBySlug(slug) {
+  const res = await apiFetch(`/courses/${slug}`, {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
     cache: 'no-store',
   });
 
@@ -56,10 +71,9 @@ export async function fetchCourseBySlug(slug, accessToken) {
 /**
  * Fetch complete curriculum modules & lessons for a course
  */
-export async function fetchCourseCurriculum(courseId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/courses/${courseId}/curriculum`, {
+export async function fetchCourseCurriculum(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/curriculum`, {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
     cache: 'no-store',
   });
 
@@ -73,14 +87,9 @@ export async function fetchCourseCurriculum(courseId, accessToken) {
 /**
  * Enroll student in a course
  */
-export async function enrollInCourse(courseId, accessToken) {
-  if (!accessToken) {
-    throw new Error('Please sign in to enroll in this course');
-  }
-
-  const res = await fetch(`${API_BASE_URL}/enrollments`, {
+export async function enrollInCourse(courseId) {
+  const res = await apiFetch('/enrollments', {
     method: 'POST',
-    headers: getAuthHeaders(accessToken),
     body: JSON.stringify({ courseId }),
   });
 
@@ -94,12 +103,9 @@ export async function enrollInCourse(courseId, accessToken) {
 /**
  * Fetch user's enrollments
  */
-export async function fetchEnrollments(accessToken) {
-  if (!accessToken) return [];
-
-  const res = await fetch(`${API_BASE_URL}/enrollments`, {
+export async function fetchEnrollments() {
+  const res = await apiFetch('/enrollments', {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -112,12 +118,9 @@ export async function fetchEnrollments(accessToken) {
 /**
  * Fetch specific enrollment for a course
  */
-export async function fetchEnrollmentByCourse(courseId, accessToken) {
-  if (!accessToken) return null;
-
-  const res = await fetch(`${API_BASE_URL}/enrollments/${courseId}`, {
+export async function fetchEnrollmentByCourse(courseId) {
+  const res = await apiFetch(`/enrollments/${courseId}`, {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
   });
 
   if (res.status === 404) return null;
@@ -131,12 +134,9 @@ export async function fetchEnrollmentByCourse(courseId, accessToken) {
 /**
  * Fetch student progress for a course
  */
-export async function fetchCourseProgress(courseId, accessToken) {
-  if (!accessToken) return null;
-
-  const res = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
+export async function fetchCourseProgress(courseId) {
+  const res = await apiFetch(`/progress/${courseId}`, {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -149,10 +149,9 @@ export async function fetchCourseProgress(courseId, accessToken) {
 /**
  * Start a lesson
  */
-export async function startLessonProgress(lessonId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/progress/lessons/${lessonId}/start`, {
+export async function startLessonProgress(lessonId) {
+  const res = await apiFetch(`/progress/lessons/${lessonId}/start`, {
     method: 'POST',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -165,10 +164,9 @@ export async function startLessonProgress(lessonId, accessToken) {
 /**
  * Update lesson position / time spent
  */
-export async function updateLessonProgress(lessonId, { lastPosition, timeSpent }, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/progress/lessons/${lessonId}`, {
+export async function updateLessonProgress(lessonId, { lastPosition, timeSpent }) {
+  const res = await apiFetch(`/progress/lessons/${lessonId}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(accessToken),
     body: JSON.stringify({ lastPosition, timeSpent }),
   });
 
@@ -182,10 +180,9 @@ export async function updateLessonProgress(lessonId, { lastPosition, timeSpent }
 /**
  * Mark lesson complete
  */
-export async function completeLessonProgress(lessonId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/progress/lessons/${lessonId}/complete`, {
+export async function completeLessonProgress(lessonId) {
+  const res = await apiFetch(`/progress/lessons/${lessonId}/complete`, {
     method: 'POST',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -198,12 +195,9 @@ export async function completeLessonProgress(lessonId, accessToken) {
 /**
  * Fetch bookmarks for student
  */
-export async function fetchBookmarks(accessToken) {
-  if (!accessToken) return [];
-
-  const res = await fetch(`${API_BASE_URL}/bookmarks`, {
+export async function fetchBookmarks() {
+  const res = await apiFetch('/bookmarks', {
     method: 'GET',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -216,10 +210,9 @@ export async function fetchBookmarks(accessToken) {
 /**
  * Toggle bookmark for a lesson
  */
-export async function toggleBookmark(lessonId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/bookmarks/${lessonId}`, {
+export async function toggleBookmark(lessonId) {
+  const res = await apiFetch(`/bookmarks/${lessonId}`, {
     method: 'POST',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();
@@ -232,10 +225,9 @@ export async function toggleBookmark(lessonId, accessToken) {
 /**
  * Delete bookmark
  */
-export async function removeBookmark(lessonId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/bookmarks/${lessonId}`, {
+export async function removeBookmark(lessonId) {
+  const res = await apiFetch(`/bookmarks/${lessonId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(accessToken),
   });
 
   const json = await res.json();

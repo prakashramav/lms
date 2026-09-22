@@ -16,11 +16,19 @@ const refreshTokenSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
     revokedAt: {
       type: Date,
       default: null,
+    },
+    role: {
+      type: String,
+      enum: ['STUDENT', 'INSTRUCTOR', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYER'],
+      default: 'STUDENT',
+    },
+    lastUsedAt: {
+      type: Date,
+      default: Date.now,
     },
     userAgent: {
       type: String,
@@ -40,6 +48,12 @@ const refreshTokenSchema = new mongoose.Schema(
 refreshTokenSchema.methods.isActive = function () {
   return !this.revokedAt && new Date() < this.expiresAt;
 };
+
+// Compound index for user session lookup
+refreshTokenSchema.index({ userId: 1, expiresAt: 1 });
+
+// TTL index to automatically purge documents 30 days after expiration
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 const RefreshToken = mongoose.model('RefreshToken', refreshTokenSchema);
 

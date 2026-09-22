@@ -366,6 +366,8 @@ function LearningEnvironmentContent() {
                 onUpdatePosition={handleUpdatePosition}
                 onMarkComplete={handleMarkComplete}
                 isCompleted={isCurrentCompleted}
+                accessToken={accessToken}
+                courseId={courseId}
               />
             )}
 

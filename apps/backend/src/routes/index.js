@@ -16,6 +16,19 @@ const jobRoutes = require('./api/v1/job.route');
 const interviewRoutes = require('./api/v1/interview.route');
 const employerRoutes = require('./api/v1/employer.route');
 const portfolioRoutes = require('./api/v1/portfolio.route');
+const personalizationRoutes = require('./api/v1/personalization.route');
+const certificateRoutes = require('./api/v1/certificate.route');
+const supportRoutes = require('./api/v1/support.route');
+const showcaseRoutes = require('./api/v1/showcase.route');
+const feedbackRoutes = require('./api/v1/feedback.route');
+const searchRoutes = require('./api/v1/search.route');
+const queueRoutes = require('./api/v1/queue.route');
+
+// Phase 16: Learning Intelligence & Ecosystem Routes
+const learningIntelligenceRoutes = require('./api/v1/learningIntelligence.route');
+const diagnosticRoutes = require('./api/v1/diagnostic.route');
+const spacedReviewRoutes = require('./api/v1/spacedReview.route');
+const cohortRoutes = require('./api/v1/cohort.route');
 
 const router = express.Router();
 
@@ -36,6 +49,23 @@ router.use('/jobs', jobRoutes);
 router.use('/interview', interviewRoutes);
 router.use('/employer', employerRoutes);
 router.use('/portfolio', portfolioRoutes);
+router.use('/personalization', personalizationRoutes);
+router.use('/certificates', certificateRoutes);
+router.use('/support', supportRoutes);
+router.use('/showcase', showcaseRoutes);
+router.use('/feedback', feedbackRoutes);
+router.use('/search', searchRoutes);
+router.use('/queue', queueRoutes);
+
+// Phase 16
+router.use('/learning-intelligence', learningIntelligenceRoutes);
+router.use('/diagnostic', diagnosticRoutes);
+router.use('/spaced-review', spacedReviewRoutes);
+router.use('/cohorts', cohortRoutes);
+
+// Cloud IDE & Learning Workspace Platform
+const workspaceRoutes = require('./api/v1/workspace.route');
+router.use('/workspaces', workspaceRoutes);
 
 module.exports = router;
 

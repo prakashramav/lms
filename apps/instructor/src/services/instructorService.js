@@ -1,14 +1,39 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
+const originalFetch = typeof globalThis !== 'undefined' && globalThis.fetch ? globalThis.fetch.bind(globalThis) : fetch;
+
+function authFetch(url, init = {}) {
+  return originalFetch(url, {
+    ...init,
+    headers: {
+      'X-Portal': 'instructor',
+      ...(init.headers || {}),
+    },
+    credentials: 'include',
+  });
+}
+
 function getHeaders(accessToken) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (accessToken) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Portal': 'instructor',
+  };
+  if (accessToken && accessToken !== 'cookie-session') {
     headers.Authorization = `Bearer ${accessToken}`;
   }
   return headers;
 }
 
 async function handleResponse(res, fallbackMessage = 'Request failed') {
+  if (res.status === 401 && typeof window !== 'undefined') {
+    const currentPath = window.location.pathname + window.location.search;
+    const redirectParam = currentPath && currentPath !== '/login' ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+    window.location.href = `/login${redirectParam}`;
+    const error = new Error('Faculty session expired');
+    error.status = 401;
+    throw error;
+  }
+
   const json = await res.json();
   if (!res.ok) {
     const error = new Error(json.message || fallbackMessage);
@@ -31,7 +56,7 @@ export async function fetchCourses(accessToken, query = {}) {
     }
   });
 
-  const res = await fetch(`${API_BASE_URL}/instructor/courses?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses?${params.toString()}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -40,7 +65,7 @@ export async function fetchCourses(accessToken, query = {}) {
 }
 
 export async function createCourse(accessToken, courseData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(courseData),
@@ -49,7 +74,7 @@ export async function createCourse(accessToken, courseData) {
 }
 
 export async function fetchCourseDetail(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -58,7 +83,7 @@ export async function fetchCourseDetail(accessToken, courseId) {
 }
 
 export async function updateCourse(accessToken, courseId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -67,7 +92,7 @@ export async function updateCourse(accessToken, courseId, updateData) {
 }
 
 export async function publishCourse(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/publish`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/publish`, {
     method: 'POST',
     headers: getHeaders(accessToken),
   });
@@ -75,7 +100,7 @@ export async function publishCourse(accessToken, courseId) {
 }
 
 export async function unpublishCourse(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/unpublish`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/unpublish`, {
     method: 'POST',
     headers: getHeaders(accessToken),
   });
@@ -83,15 +108,23 @@ export async function unpublishCourse(accessToken, courseId) {
 }
 
 export async function archiveCourse(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
-    method: 'DELETE',
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/archive`, {
+    method: 'POST',
     headers: getHeaders(accessToken),
   });
   return handleResponse(res, 'Failed to archive course');
 }
 
+export async function deleteCourse(accessToken, courseId) {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}`, {
+    method: 'DELETE',
+    headers: getHeaders(accessToken),
+  });
+  return handleResponse(res, 'Failed to delete course');
+}
+
 export async function duplicateCourse(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/duplicate`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/duplicate`, {
     method: 'POST',
     headers: getHeaders(accessToken),
   });
@@ -103,7 +136,7 @@ export async function duplicateCourse(accessToken, courseId) {
 // ==========================================
 
 export async function addModule(accessToken, courseId, moduleData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/modules`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/modules`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(moduleData),
@@ -112,7 +145,7 @@ export async function addModule(accessToken, courseId, moduleData) {
 }
 
 export async function updateModule(accessToken, moduleId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/modules/${moduleId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/modules/${moduleId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -121,7 +154,7 @@ export async function updateModule(accessToken, moduleId, updateData) {
 }
 
 export async function deleteModule(accessToken, moduleId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/modules/${moduleId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/modules/${moduleId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -129,7 +162,7 @@ export async function deleteModule(accessToken, moduleId) {
 }
 
 export async function reorderModules(accessToken, courseId, moduleIds) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/modules/reorder`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/modules/reorder`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ moduleIds }),
@@ -138,7 +171,7 @@ export async function reorderModules(accessToken, courseId, moduleIds) {
 }
 
 export async function addLesson(accessToken, moduleId, lessonData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/modules/${moduleId}/lessons`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/modules/${moduleId}/lessons`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(lessonData),
@@ -147,7 +180,7 @@ export async function addLesson(accessToken, moduleId, lessonData) {
 }
 
 export async function updateLesson(accessToken, lessonId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/lessons/${lessonId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/lessons/${lessonId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -156,7 +189,7 @@ export async function updateLesson(accessToken, lessonId, updateData) {
 }
 
 export async function deleteLesson(accessToken, lessonId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/lessons/${lessonId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/lessons/${lessonId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -164,7 +197,7 @@ export async function deleteLesson(accessToken, lessonId) {
 }
 
 export async function reorderLessons(accessToken, moduleId, lessonIds) {
-  const res = await fetch(`${API_BASE_URL}/instructor/modules/${moduleId}/lessons/reorder`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/modules/${moduleId}/lessons/reorder`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ lessonIds }),
@@ -177,7 +210,7 @@ export async function reorderLessons(accessToken, moduleId, lessonIds) {
 // ==========================================
 
 export async function uploadFile(accessToken, { name, data, mimeType, folder = 'resources' }) {
-  const res = await fetch(`${API_BASE_URL}/instructor/upload`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/upload`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ name, data, mimeType, folder }),
@@ -186,7 +219,7 @@ export async function uploadFile(accessToken, { name, data, mimeType, folder = '
 }
 
 export async function attachResource(accessToken, lessonId, resourceData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/lessons/${lessonId}/resources`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/lessons/${lessonId}/resources`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(resourceData),
@@ -195,7 +228,7 @@ export async function attachResource(accessToken, lessonId, resourceData) {
 }
 
 export async function deleteResource(accessToken, resourceId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/resources/${resourceId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/resources/${resourceId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -208,7 +241,7 @@ export async function deleteResource(accessToken, resourceId) {
 
 export async function fetchAssessments(accessToken, query = {}) {
   const params = new URLSearchParams(query);
-  const res = await fetch(`${API_BASE_URL}/instructor/assessments?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/assessments?${params.toString()}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -217,7 +250,7 @@ export async function fetchAssessments(accessToken, query = {}) {
 }
 
 export async function createAssessment(accessToken, data) {
-  const res = await fetch(`${API_BASE_URL}/instructor/assessments`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/assessments`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(data),
@@ -226,7 +259,7 @@ export async function createAssessment(accessToken, data) {
 }
 
 export async function fetchAssessmentDetail(accessToken, assessmentId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -235,7 +268,7 @@ export async function fetchAssessmentDetail(accessToken, assessmentId) {
 }
 
 export async function updateAssessment(accessToken, assessmentId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -244,7 +277,7 @@ export async function updateAssessment(accessToken, assessmentId, updateData) {
 }
 
 export async function deleteAssessment(accessToken, assessmentId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/assessments/${assessmentId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -253,7 +286,7 @@ export async function deleteAssessment(accessToken, assessmentId) {
 
 export async function fetchQuestionBank(accessToken, query = {}) {
   const params = new URLSearchParams(query);
-  const res = await fetch(`${API_BASE_URL}/instructor/questions?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/questions?${params.toString()}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -262,7 +295,7 @@ export async function fetchQuestionBank(accessToken, query = {}) {
 }
 
 export async function createQuestion(accessToken, questionData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/questions`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/questions`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(questionData),
@@ -271,7 +304,7 @@ export async function createQuestion(accessToken, questionData) {
 }
 
 export async function updateQuestion(accessToken, questionId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/questions/${questionId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/questions/${questionId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -280,7 +313,7 @@ export async function updateQuestion(accessToken, questionId, updateData) {
 }
 
 export async function deleteQuestion(accessToken, questionId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/questions/${questionId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/questions/${questionId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -288,7 +321,7 @@ export async function deleteQuestion(accessToken, questionId) {
 }
 
 export async function duplicateQuestion(accessToken, questionId, targetAssessmentId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/questions/${questionId}/duplicate`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/questions/${questionId}/duplicate`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ targetAssessmentId }),
@@ -302,7 +335,7 @@ export async function duplicateQuestion(accessToken, questionId, targetAssessmen
 
 export async function fetchProblems(accessToken, query = {}) {
   const params = new URLSearchParams(query);
-  const res = await fetch(`${API_BASE_URL}/instructor/problems?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems?${params.toString()}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -311,7 +344,7 @@ export async function fetchProblems(accessToken, query = {}) {
 }
 
 export async function createProblem(accessToken, problemData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(problemData),
@@ -320,7 +353,7 @@ export async function createProblem(accessToken, problemData) {
 }
 
 export async function fetchProblemDetail(accessToken, problemId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -329,7 +362,7 @@ export async function fetchProblemDetail(accessToken, problemId) {
 }
 
 export async function updateProblem(accessToken, problemId, updateData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
     body: JSON.stringify(updateData),
@@ -338,7 +371,7 @@ export async function updateProblem(accessToken, problemId, updateData) {
 }
 
 export async function publishProblem(accessToken, problemId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}/publish`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}/publish`, {
     method: 'POST',
     headers: getHeaders(accessToken),
   });
@@ -346,7 +379,7 @@ export async function publishProblem(accessToken, problemId) {
 }
 
 export async function unpublishProblem(accessToken, problemId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}/unpublish`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}/unpublish`, {
     method: 'POST',
     headers: getHeaders(accessToken),
   });
@@ -354,7 +387,7 @@ export async function unpublishProblem(accessToken, problemId) {
 }
 
 export async function deleteProblem(accessToken, problemId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -362,7 +395,7 @@ export async function deleteProblem(accessToken, problemId) {
 }
 
 export async function addTestCase(accessToken, problemId, testCaseData) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}/test-cases`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}/test-cases`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify(testCaseData),
@@ -371,7 +404,7 @@ export async function addTestCase(accessToken, problemId, testCaseData) {
 }
 
 export async function deleteTestCase(accessToken, problemId, testCaseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/problems/${problemId}/test-cases/${testCaseId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/problems/${problemId}/test-cases/${testCaseId}`, {
     method: 'DELETE',
     headers: getHeaders(accessToken),
   });
@@ -384,7 +417,7 @@ export async function deleteTestCase(accessToken, problemId, testCaseId) {
 
 export async function fetchStudents(accessToken, query = {}) {
   const params = new URLSearchParams(query);
-  const res = await fetch(`${API_BASE_URL}/instructor/students?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/students?${params.toString()}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -393,7 +426,7 @@ export async function fetchStudents(accessToken, query = {}) {
 }
 
 export async function fetchStudentDetail(accessToken, courseId, studentId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/students/${studentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/students/${studentId}`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -402,7 +435,7 @@ export async function fetchStudentDetail(accessToken, courseId, studentId) {
 }
 
 export async function fetchOverviewAnalytics(accessToken) {
-  const res = await fetch(`${API_BASE_URL}/instructor/analytics/overview`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/analytics/overview`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -411,7 +444,7 @@ export async function fetchOverviewAnalytics(accessToken) {
 }
 
 export async function fetchCourseAnalytics(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/analytics`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/analytics`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -424,7 +457,7 @@ export async function fetchCourseAnalytics(accessToken, courseId) {
 // ==========================================
 
 export async function generateLessonOutline(accessToken, { topic, level = 'Beginner', courseContext = '' }) {
-  const res = await fetch(`${API_BASE_URL}/instructor/ai/generate-outline`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/ai/generate-outline`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ topic, level, courseContext }),
@@ -433,7 +466,7 @@ export async function generateLessonOutline(accessToken, { topic, level = 'Begin
 }
 
 export async function generateQuestions(accessToken, { topic, difficulty = 'Intermediate', count = 3 }) {
-  const res = await fetch(`${API_BASE_URL}/instructor/ai/generate-questions`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/ai/generate-questions`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ topic, difficulty, count }),
@@ -442,7 +475,7 @@ export async function generateQuestions(accessToken, { topic, difficulty = 'Inte
 }
 
 export async function generateCodingProblem(accessToken, { topic, difficulty = 'EASY' }) {
-  const res = await fetch(`${API_BASE_URL}/instructor/ai/generate-problem`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/ai/generate-problem`, {
     method: 'POST',
     headers: getHeaders(accessToken),
     body: JSON.stringify({ topic, difficulty }),
@@ -455,7 +488,7 @@ export async function generateCodingProblem(accessToken, { topic, difficulty = '
 // ==========================================
 
 export async function fetchNotifications(accessToken) {
-  const res = await fetch(`${API_BASE_URL}/instructor/notifications`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/notifications`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',
@@ -464,7 +497,7 @@ export async function fetchNotifications(accessToken) {
 }
 
 export async function markNotificationRead(accessToken, notificationId = 'all') {
-  const res = await fetch(`${API_BASE_URL}/instructor/notifications/${notificationId}/read`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/notifications/${notificationId}/read`, {
     method: 'PATCH',
     headers: getHeaders(accessToken),
   });
@@ -476,7 +509,7 @@ export async function markNotificationRead(accessToken, notificationId = 'all') 
 // ==========================================
 
 export async function fetchCourseIntelligence(accessToken, courseId) {
-  const res = await fetch(`${API_BASE_URL}/instructor/courses/${courseId}/intelligence`, {
+  const res = await authFetch(`${API_BASE_URL}/instructor/courses/${courseId}/intelligence`, {
     method: 'GET',
     headers: getHeaders(accessToken),
     cache: 'no-store',

@@ -1,21 +1,26 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 async function fetchWithAuth(endpoint, options = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-
   const headers = {
     'Content-Type': 'application/json',
+    'X-Portal': 'student',
     ...(options.headers || {}),
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    const currentPath = window.location.pathname + window.location.search;
+    const redirectParam = currentPath && currentPath !== '/login' ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+    window.location.href = `/login${redirectParam}`;
+    const error = new Error('Session expired');
+    error.status = 401;
+    throw error;
+  }
 
   const data = await res.json();
   if (!res.ok) {

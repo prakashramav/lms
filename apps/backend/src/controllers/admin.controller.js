@@ -249,7 +249,13 @@ exports.publishCourse = async (req, res, next) => {
     const course = await adminCourseService.publishCourse(req.params.courseId, req.user, req);
     res.status(200).json({
       success: true,
-      message: 'Course published to catalog',
+      message: 'Course published successfully',
+      course: {
+        id: course._id,
+        status: (course.status || 'PUBLISHED').toLowerCase(),
+        publishedAt: course.publishedAt,
+        publishedByRole: 'admin',
+      },
       data: course,
     });
   } catch (err) {
@@ -302,6 +308,44 @@ exports.flagCourse = async (req, res, next) => {
       data: course,
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteCourse = async (req, res, next) => {
+  try {
+    const result = await adminCourseService.deleteCourse(
+      req.params.courseId,
+      req.user,
+      req,
+      req.body?.reason
+    );
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.code === 'INVALID_COURSE_ID' || err.statusCode === 400) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_COURSE_ID',
+        errorCode: 'INVALID_COURSE_ID',
+        message: err.message || 'Invalid course ID.',
+      });
+    }
+    if (err.code === 'COURSE_NOT_FOUND' || err.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        code: 'COURSE_NOT_FOUND',
+        errorCode: 'COURSE_NOT_FOUND',
+        message: 'Course not found.',
+      });
+    }
+    if (err.code === 'COURSE_DELETE_FORBIDDEN' || err.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        code: 'COURSE_DELETE_FORBIDDEN',
+        errorCode: 'COURSE_DELETE_FORBIDDEN',
+        message: err.message || 'Forbidden.',
+      });
+    }
     next(err);
   }
 };

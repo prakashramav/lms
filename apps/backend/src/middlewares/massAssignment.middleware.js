@@ -26,6 +26,12 @@ const protectMassAssignment = (req, res, next) => {
     // If client attempts to mutate privileged fields and is not admin, strip them
     if (!isAdmin) {
       for (const field of FORBIDDEN_CLIENT_FIELDS) {
+        // Exception: allow role on registration only when requesting INSTRUCTOR
+        if (field === 'role' && req.originalUrl && req.originalUrl.includes('/auth/register')) {
+          if (req.body.role && req.body.role.toString().toUpperCase().trim() === 'INSTRUCTOR') {
+            continue;
+          }
+        }
         if (field in req.body) {
           delete req.body[field];
         }

@@ -31,10 +31,14 @@ export default function StudentDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // If initial auth check finished and user is not authenticated, redirect to login
+  // If initial auth check finished and user is not authenticated or not a student, redirect to login
   useEffect(() => {
-    if (!isLoading && !user && !accessToken) {
-      router.push('/login?redirect=/dashboard');
+    if (!isLoading) {
+      if (!user || !accessToken) {
+        router.push('/login?redirect=/dashboard');
+      } else if (user.role && user.role !== 'STUDENT') {
+        router.push('/login?redirect=/dashboard&error=role_mismatch');
+      }
     }
   }, [isLoading, user, accessToken, router]);
 
@@ -65,6 +69,8 @@ export default function StudentDashboardPage() {
         } else {
           setError('Your session has expired. Please sign in again.');
         }
+      } else if (err.status === 403 || err.message === 'FORBIDDEN_ROLE' || err.message?.includes('Requires one of roles')) {
+        setError('Access restricted to student accounts. Please sign in with a student account.');
       } else {
         setError(err.message || 'Unable to load your dashboard.');
       }
@@ -94,13 +100,13 @@ export default function StudentDashboardPage() {
               <p className="text-sm text-slate-500 dark:text-slate-400">{error}</p>
             </div>
             <div className="flex items-center justify-center gap-4 pt-2">
-              {(!user || !accessToken || error.includes('session') || error.includes('sign in') || error.includes('expired')) ? (
+              {(!user || !accessToken || error.includes('session') || error.includes('sign in') || error.includes('expired') || error.includes('restricted') || error.includes('student account') || error.includes('denied')) ? (
                 <Link
                   href="/login?redirect=/dashboard"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition shadow-sm"
                 >
                   <LogIn className="w-4 h-4" />
-                  Sign In to Your Account
+                  Sign In with Student Account
                 </Link>
               ) : (
                 <button

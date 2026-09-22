@@ -11,10 +11,15 @@ const { Problem } = require('../models/problem.model');
 const requireCourseOwner = async (req, res, next) => {
   try {
     const courseId = req.params.courseId || req.body.courseId;
-    if (!courseId) {
+    if (
+      !courseId ||
+      courseId === 'undefined' ||
+      courseId === 'null' ||
+      (typeof courseId === 'string' && !courseId.trim())
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Course ID parameter is required.',
+        message: 'Valid Course ID parameter is required.',
         errorCode: 'VALIDATION_ERROR',
       });
     }
@@ -23,7 +28,7 @@ const requireCourseOwner = async (req, res, next) => {
     if (mongoose.Types.ObjectId.isValid(courseId)) {
       course = await Course.findById(courseId);
     } else {
-      course = await Course.findOne({ slug: courseId });
+      course = await Course.findOne({ slug: courseId.toLowerCase().trim() });
     }
 
     if (!course) {
@@ -47,6 +52,7 @@ const requireCourseOwner = async (req, res, next) => {
     }
 
     req.course = course;
+    req.courseId = course._id;
     next();
   } catch (error) {
     next(error);
