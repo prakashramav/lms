@@ -130,8 +130,14 @@ export default function CreateCoursePage() {
         status: 'DRAFT',
       };
 
-      const newCourse = await createCourse(accessToken, payload);
-      router.push(`/courses/${newCourse._id}/edit`);
+      const res = await createCourse(accessToken, payload);
+      const targetCourse = res?.course || res?.data?.course || res;
+      const targetId = targetCourse?._id || targetCourse?.id;
+      if (targetId) {
+        router.push(`/courses/${targetId}/edit`);
+      } else {
+        router.push('/courses');
+      }
     } catch (err) {
       console.error('Course creation failed:', err);
       setErrorMessage(err.message || 'Failed to initialize course blueprint.');

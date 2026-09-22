@@ -5,7 +5,22 @@ const { Lesson } = require('../../models/lesson.model');
 const { Enrollment } = require('../../models/enrollment.model');
 const Progress = require('../../models/progress.model');
 const Resource = require('../../models/resource.model');
+const Assessment = require('../../models/assessment.model');
+const Bookmark = require('../../models/bookmark.model');
+const { Feedback } = require('../../models/feedback.model');
+const { VectorChunk } = require('../../models/vectorChunk.model');
 const { logAction } = require('../audit.service');
+
+/**
+ * Helper to resolve a Course by ObjectId or slug
+ */
+const findCourseByIdOrSlug = async (courseId) => {
+  if (!courseId || courseId === 'undefined' || courseId === 'null') return null;
+  if (mongoose.Types.ObjectId.isValid(courseId)) {
+    return Course.findById(courseId);
+  }
+  return Course.findOne({ slug: courseId.toString().toLowerCase().trim() });
+};
 
 /**
  * Generate URL-friendly slug
@@ -168,6 +183,7 @@ const createCourse = async (instructorId, data) => {
     pricingType,
     status: 'DRAFT',
     isPublished: false,
+    isDeleted: false,
     instructor: instructorId,
     version: 1,
   });
@@ -187,12 +203,7 @@ const createCourse = async (instructorId, data) => {
  * Get full course structure for editor
  */
 const getCourseDetail = async (courseId, instructorId) => {
-  let course = null;
-  if (mongoose.Types.ObjectId.isValid(courseId)) {
-    course = await Course.findById(courseId);
-  } else {
-    course = await Course.findOne({ slug: courseId });
-  }
+  const course = await findCourseByIdOrSlug(courseId);
 
   if (!course) {
     const err = new Error('Course not found.');
@@ -244,7 +255,7 @@ const getCourseDetail = async (courseId, instructorId) => {
  * Update course metadata
  */
 const updateCourse = async (courseId, instructorId, updateData) => {
-  let course = await Course.findById(courseId);
+  let course = await findCourseByIdOrSlug(courseId);
   if (!course) {
     const err = new Error('Course not found.');
     err.statusCode = 404;
@@ -309,7 +320,7 @@ const updateCourse = async (courseId, instructorId, updateData) => {
  * Publish course with comprehensive validation checklist
  */
 const publishCourse = async (courseId, instructorId) => {
-  const course = await Course.findById(courseId);
+  const course = await findCourseByIdOrSlug(courseId);
   if (!course) {
     const err = new Error('Course not found.');
     err.statusCode = 404;
@@ -353,8 +364,11 @@ const publishCourse = async (courseId, instructorId) => {
 
   course.status = 'PUBLISHED';
   course.isPublished = true;
+  course.isPublic = true;
+  course.isDeleted = false;
   course.publishedAt = new Date();
   course.publishedBy = instructorId;
+  course.publishedByRole = 'instructor';
   course.version = (course.version || 1) + 1;
   await course.save();
 
@@ -373,7 +387,7 @@ const publishCourse = async (courseId, instructorId) => {
  * Unpublish course (retains student enrollment/progress records)
  */
 const unpublishCourse = async (courseId, instructorId) => {
-  const course = await Course.findById(courseId);
+  const course = await findCourseByIdOrSlug(courseId);
   if (!course) {
     const err = new Error('Course not found.');
     err.statusCode = 404;
@@ -405,7 +419,7 @@ const unpublishCourse = async (courseId, instructorId) => {
  * Archive / soft-delete course
  */
 const archiveCourse = async (courseId, instructorId) => {
-  const course = await Course.findById(courseId);
+  const course = await findCourseByIdOrSlug(courseId);
   if (!course) {
     const err = new Error('Course not found.');
     err.statusCode = 404;
@@ -437,7 +451,7 @@ const archiveCourse = async (courseId, instructorId) => {
  * Duplicate a course with its modules and lessons
  */
 const duplicateCourse = async (courseId, instructorId) => {
-  const original = await Course.findById(courseId);
+  const original = await findCourseByIdOrSlug(courseId);
   if (!original) {
     const err = new Error('Original course not found.');
     err.statusCode = 404;
@@ -528,7 +542,7 @@ const duplicateCourse = async (courseId, instructorId) => {
  * Add a module to course
  */
 const addModule = async (courseId, instructorId, { title, description = '', order }) => {
-  const course = await Course.findById(courseId);
+  const course = await findCourseByIdOrSlug(courseId);
   if (!course) {
     const err = new Error('Course not found.');
     err.statusCode = 404;
@@ -542,12 +556,12 @@ const addModule = async (courseId, instructorId, { title, description = '', orde
 
   let finalOrder = order;
   if (!finalOrder) {
-    const lastModule = await Module.findOne({ courseId }).sort({ order: -1 });
+    const lastModule = await Module.findOne({ courseId: course._id }).sort({ order: -1 });
     finalOrder = lastModule ? lastModule.order + 1 : 1;
   }
 
   const moduleDoc = await Module.create({
-    courseId,
+    courseId: course._id,
     title,
     description,
     order: finalOrder,
@@ -559,7 +573,7 @@ const addModule = async (courseId, instructorId, { title, description = '', orde
     action: 'MODULE_CREATED',
     resourceType: 'MODULE',
     resourceId: moduleDoc._id,
-    metadata: { courseId, title },
+    metadata: { courseId: course._id, title },
   });
 
   return moduleDoc;
@@ -628,8 +642,13 @@ const deleteModule = async (moduleId, instructorId) => {
  * Reorder modules in course
  */
 const reorderModules = async (courseId, instructorId, orderedModuleIds) => {
-  const course = await Course.findById(courseId);
-  if (!course || course.instructor.toString() !== instructorId.toString()) {
+  const course = await findCourseByIdOrSlug(courseId);
+  if (!course) {
+    const err = new Error('Course not found.');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (course.instructor.toString() !== instructorId.toString()) {
     const err = new Error('Forbidden. You do not own this course.');
     err.statusCode = 403;
     throw err;
@@ -641,7 +660,7 @@ const reorderModules = async (courseId, instructorId, orderedModuleIds) => {
 
   const updatePromises = orderedModuleIds.map((id, index) =>
     Module.findOneAndUpdate(
-      { _id: id, courseId },
+      { _id: id, courseId: course._id },
       { $set: { order: index + 1 } },
       { new: true }
     )
@@ -860,6 +879,96 @@ const reorderLessons = async (moduleId, instructorId, orderedLessonIds) => {
   return { success: true, message: 'Lessons reordered successfully.' };
 };
 
+/**
+ * Permanently delete a course and its dependent child resources safely
+ */
+const deleteCourse = async (courseId, instructorId, userRole = 'INSTRUCTOR') => {
+  const course = await findCourseByIdOrSlug(courseId);
+  if (!course) {
+    const err = new Error('Course not found.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const isOwner = course.instructor && course.instructor.toString() === instructorId.toString();
+  const isAdmin = userRole === 'ADMIN';
+
+  if (!isOwner && !isAdmin) {
+    const err = new Error('Forbidden. You do not own this course.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // 1. Gather child module and lesson IDs for cascading
+  const modules = await Module.find({ courseId: course._id }).select('_id').lean();
+  const moduleIds = modules.map((m) => m._id);
+
+  const lessons = await Lesson.find({
+    $or: [{ courseId: course._id }, { moduleId: { $in: moduleIds } }],
+  }).select('_id').lean();
+  const lessonIds = lessons.map((l) => l._id);
+
+  // 2. Cascade delete dependent content
+  await Promise.all([
+    // Student bookmarks on deleted lessons
+    Bookmark.deleteMany({ lessonId: { $in: lessonIds } }),
+    // Lessons
+    Lesson.deleteMany({
+      $or: [{ courseId: course._id }, { moduleId: { $in: moduleIds } }],
+    }),
+    // Modules
+    Module.deleteMany({ courseId: course._id }),
+    // Attached downloadable resources / links
+    Resource.deleteMany({ courseId: course._id }),
+    // Course / Module assessments
+    Assessment.deleteMany({
+      $or: [{ courseId: course._id }, { moduleId: { $in: moduleIds } }],
+    }),
+    // Student progress telemetry
+    Progress.deleteMany({ courseId: course._id }),
+    // Enrollments
+    Enrollment.deleteMany({ courseId: course._id }),
+    // Course feedback & reviews
+    Feedback.deleteMany({ targetType: 'COURSE', targetId: course._id.toString() }),
+    // AI RAG vector embeddings
+    VectorChunk.deleteMany({ courseId: course._id }),
+  ]);
+
+  // NOTE: Certificate records are intentionally preserved! Students who earned
+  // verifiable credentials retain their historical certificates and verification URLs.
+
+  // 3. Mark Course as soft-deleted and archived (preserves relational integrity for certificates & audits)
+  course.isDeleted = true;
+  course.deletedAt = new Date();
+  course.deletedBy = instructorId;
+  course.status = 'ARCHIVED';
+  course.isPublished = false;
+  course.deletionReason = `Deleted by ${userRole || 'INSTRUCTOR'}`;
+  await course.save();
+
+  // 4. Audit logging
+  await logAction({
+    actorId: instructorId,
+    actorRole: userRole || 'INSTRUCTOR',
+    action: 'COURSE_DELETED',
+    resourceType: 'COURSE',
+    resourceId: course._id,
+    metadata: {
+      title: course.title,
+      slug: course.slug,
+      deletedModulesCount: moduleIds.length,
+      deletedLessonsCount: lessonIds.length,
+      deletedAt: new Date(),
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Course and associated curriculum deleted permanently.',
+    deletedCourseId: course._id,
+  };
+};
+
 module.exports = {
   getInstructorCourses,
   createCourse,
@@ -868,6 +977,7 @@ module.exports = {
   publishCourse,
   unpublishCourse,
   archiveCourse,
+  deleteCourse,
   duplicateCourse,
   addModule,
   updateModule,

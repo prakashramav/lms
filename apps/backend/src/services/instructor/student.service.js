@@ -91,7 +91,13 @@ const getInstructorStudents = async (instructorId, {
  */
 const getStudentCourseDetail = async (instructorId, courseId, studentId) => {
   // Verify instructor owns the course
-  const course = await Course.findOne({ _id: courseId, instructor: instructorId }).lean();
+  let courseQuery = { instructor: instructorId };
+  if (mongoose.Types.ObjectId.isValid(courseId)) {
+    courseQuery._id = courseId;
+  } else {
+    courseQuery.slug = courseId.toString().toLowerCase().trim();
+  }
+  const course = await Course.findOne(courseQuery).lean();
   if (!course) {
     const err = new Error('Course not found or unauthorized.');
     err.statusCode = 404;
@@ -100,9 +106,9 @@ const getStudentCourseDetail = async (instructorId, courseId, studentId) => {
 
   const [student, enrollment, progressRecords, assessmentAttempts, codingSubmissions] = await Promise.all([
     User.findById(studentId).select('name email createdAt').lean(),
-    Enrollment.findOne({ courseId, studentId }).lean(),
-    Progress.find({ courseId, studentId }).populate('lessonId', 'title slug type duration').lean(),
-    AssessmentAttempt.find({ studentId, courseId, status: 'SUBMITTED' })
+    Enrollment.findOne({ courseId: course._id, studentId }).lean(),
+    Progress.find({ courseId: course._id, studentId }).populate('lessonId', 'title slug type duration').lean(),
+    AssessmentAttempt.find({ studentId, courseId: course._id, status: 'SUBMITTED' })
       .populate('assessmentId', 'title type totalMarks')
       .sort({ createdAt: -1 })
       .lean(),

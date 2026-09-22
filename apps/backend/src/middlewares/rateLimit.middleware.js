@@ -9,7 +9,7 @@ const createLimiter = (options) => {
     standardHeaders: true,
     legacyHeaders: false,
     message: options.message,
-    skip: () => env.isTest, // Skip in test mode unless overridden
+    skip: () => env.isTest || !env.isProduction, // Skip in test mode and local development to prevent IP lockout
   });
 };
 

@@ -17,6 +17,9 @@ import {
   Archive,
   Loader2,
   Users,
+  Trash2,
+  AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function CoursesManagementPage() {
@@ -27,6 +30,30 @@ export default function CoursesManagementPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState({ open: false, course: null, confirmTitle: '', isDeleting: false, error: null });
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && deleteModal.open && !deleteModal.isDeleting) {
+        setDeleteModal({ open: false, course: null, confirmTitle: '', isDeleting: false, error: null });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteModal.open, deleteModal.isDeleting]);
+
+  const handleDeleteCourse = async () => {
+    if (!deleteModal.course) return;
+    if (deleteModal.confirmTitle.trim().toLowerCase() !== deleteModal.course.title.trim().toLowerCase()) return;
+    setDeleteModal((prev) => ({ ...prev, isDeleting: true, error: null }));
+    try {
+      await adminApi.deleteCourse(deleteModal.course._id, { reason: 'Deleted by administrator from courses table' });
+      setCourses((prev) => prev.filter((c) => c._id !== deleteModal.course._id));
+      setDeleteModal({ open: false, course: null, confirmTitle: '', isDeleting: false, error: null });
+    } catch (err) {
+      setDeleteModal((prev) => ({ ...prev, isDeleting: false, error: err.message || 'Failed to delete course' }));
+    }
+  };
 
   const fetchCourses = async (page = 1) => {
     setIsLoading(true);
@@ -163,11 +190,16 @@ export default function CoursesManagementPage() {
                         }`}>
                           {c.status}
                         </span>
+                        {c.publishedByRole && (
+                          <p className="text-[10px] text-slate-500 mt-0.5 capitalize">
+                            by {c.publishedByRole}
+                          </p>
+                        )}
                       </td>
                       <td className="p-4 text-slate-300 font-medium">
                         {c.enrollmentCount || 0}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right space-x-2">
                         <a
                           href={`/courses/${c._id}/review`}
                           className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition"
@@ -175,6 +207,16 @@ export default function CoursesManagementPage() {
                           <Eye className="w-3.5 h-3.5 text-indigo-400" />
                           <span>Review</span>
                         </a>
+                        {hasPermission('courses.publish') && (
+                          <button
+                            onClick={() => setDeleteModal({ open: true, course: c, confirmTitle: '', isDeleting: false, error: null })}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg text-xs font-medium transition"
+                            title="Delete Course"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -205,6 +247,110 @@ export default function CoursesManagementPage() {
             </div>
           )}
         </div>
+
+        {/* Admin Delete Course Confirmation Modal */}
+        {deleteModal.open && deleteModal.course && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-delete-course-title"
+          >
+            <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl">
+              <div className="flex items-start space-x-3">
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-rose-400" />
+                </div>
+                <div>
+                  <h3 id="admin-delete-course-title" className="text-base font-bold text-white">
+                    Delete Course Permanently?
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    This administrative action permanently removes the course from student discovery, search indices, and recommendations.
+                  </p>
+                </div>
+              </div>
+
+              {/* Course Context & Statistics */}
+              <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 text-xs space-y-2 text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Course:</span>
+                  <span className="font-semibold text-white">{deleteModal.course.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Instructor:</span>
+                  <span className="font-medium text-slate-200">{deleteModal.course.instructor?.name || 'Assigned Staff'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Enrolled Students:</span>
+                  <span className="font-medium text-slate-200">{deleteModal.course.enrollmentCount || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Publication Status:</span>
+                  <span className="font-bold uppercase text-[10px] text-amber-400">{deleteModal.course.status}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300">
+                <strong>Safety Policy:</strong> Historical credentials and issued student certificates are preserved for portfolio verification.
+              </div>
+
+              {deleteModal.error && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{deleteModal.error}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-xs text-slate-400 font-medium">
+                  Type <span className="text-rose-400 font-bold select-all">&quot;{deleteModal.course.title}&quot;</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteModal.confirmTitle}
+                  onChange={(e) => setDeleteModal({ ...deleteModal, confirmTitle: e.target.value })}
+                  placeholder={deleteModal.course.title}
+                  disabled={deleteModal.isDeleting}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  disabled={deleteModal.isDeleting}
+                  onClick={() => setDeleteModal({ open: false, course: null, confirmTitle: '', isDeleting: false, error: null })}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    deleteModal.confirmTitle.trim().toLowerCase() !== deleteModal.course.title.trim().toLowerCase() ||
+                    deleteModal.isDeleting
+                  }
+                  onClick={handleDeleteCourse}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-rose-600/20"
+                >
+                  {deleteModal.isDeleting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

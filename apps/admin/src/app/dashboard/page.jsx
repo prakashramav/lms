@@ -39,7 +39,7 @@ export default function AdminDashboardPage() {
         adminApi.getAuditLogs({ limit: 6 }),
       ]);
 
-      setData(overviewRes.data?.kpis || {});
+      setData(overviewRes.data?.kpis || overviewRes.data || {});
       setPendingCourses(pendingRes.data?.courses || []);
       setAuditLogs(auditRes.data?.logs || []);
     } catch (err) {

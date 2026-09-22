@@ -16,7 +16,9 @@ import {
   ExternalLink,
   BookOpen,
   Sparkles,
+  Code2,
 } from 'lucide-react';
+import WorkspaceIDE from '../workspace/WorkspaceIDE';
 
 export default function LessonPlayer({
   lesson,
@@ -26,9 +28,23 @@ export default function LessonPlayer({
   onUpdatePosition = null,
   onMarkComplete = null,
   isCompleted = false,
+  accessToken = null,
+  courseId = null,
 }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
+
+  // Active view mode when workspace is available
+  const hasWorkspace = Boolean(lesson?.workspace?.enabled);
+  const [viewMode, setViewMode] = useState(hasWorkspace ? 'workspace' : 'material');
+
+  useEffect(() => {
+    if (lesson?.workspace?.enabled) {
+      setViewMode('workspace');
+    } else {
+      setViewMode('material');
+    }
+  }, [lesson?._id, lesson?.workspace?.enabled]);
 
   // Video playback states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -161,11 +177,53 @@ export default function LessonPlayer({
 
   return (
     <div className="space-y-6">
-      {/* Player Box / Article Container */}
-      <div
-        ref={containerRef}
-        className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-xl"
-      >
+      {/* Learning Environment Switcher */}
+      {hasWorkspace && (
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit shadow-xs">
+          <button
+            type="button"
+            onClick={() => setViewMode('material')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'material'
+                ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Lesson Material</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('workspace')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'workspace'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Code2 className="w-4 h-4" />
+            <span>Cloud Workspace IDE</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] uppercase bg-black/20 text-white font-mono">
+              {lesson?.workspace?.templateId || 'IDE'}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Render Cloud Workspace IDE if selected */}
+      {hasWorkspace && viewMode === 'workspace' ? (
+        <WorkspaceIDE
+          courseId={courseId || lesson.courseId}
+          lessonId={lesson._id}
+          defaultTemplateId={lesson.workspace?.templateId || 'react'}
+          accessToken={accessToken}
+        />
+      ) : (
+        /* Player Box / Article Container */
+        <div
+          ref={containerRef}
+          className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-xl"
+        >
         {lesson.type === 'VIDEO' ? (
           <div className="relative group aspect-video w-full flex items-center justify-center bg-black">
             {lesson.videoUrl ? (
@@ -357,6 +415,7 @@ export default function LessonPlayer({
           </div>
         )}
       </div>
+      )}
 
       {/* Lesson Details & Completion Action */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">

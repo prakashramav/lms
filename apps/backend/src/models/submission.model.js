@@ -11,18 +11,61 @@ const submissionSchema = new mongoose.Schema(
     problemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Problem',
-      required: true,
+      required: false,
+      default: null,
       index: true,
+    },
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      default: null,
+      index: true,
+    },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      default: null,
+      index: true,
+    },
+    lessonId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Lesson',
+      default: null,
+      index: true,
+    },
+    assignmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Assignment',
+      default: null,
+      index: true,
+    },
+    assignmentVersion: {
+      type: String,
+      default: '1.0',
+    },
+    templateVersion: {
+      type: String,
+      default: '1.0',
+    },
+    snapshotHash: {
+      type: String,
+      default: null,
+    },
+    gradingPolicy: {
+      type: String,
+      enum: ['AUTO', 'MANUAL', 'HYBRID', 'PRACTICE'],
+      default: 'AUTO',
     },
     language: {
       type: String,
-      required: true,
-      enum: ['javascript', 'html_css', 'react', 'node', 'express', 'python', 'java', 'cpp', 'typescript'],
+      required: false,
+      default: 'javascript',
     },
     code: {
       type: String,
-      required: true,
-      maxlength: [100000, 'Code exceeds maximum size of 100KB'],
+      required: false,
+      default: '',
+      maxlength: [500000, 'Code exceeds maximum size limit'],
     },
     status: {
       type: String,

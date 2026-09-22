@@ -21,10 +21,11 @@ const getCourses = async ({
   const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
   const skip = (pageNum - 1) * limitNum;
 
-  // Base query: Only PUBLISHED courses for students
+  // Base query: Only PUBLISHED and non-deleted courses for students
   const query = {
     isPublished: true,
     status: 'PUBLISHED',
+    isDeleted: { $ne: true },
   };
 
   // Keyword search
@@ -49,15 +50,17 @@ const getCourses = async ({
   }
 
   // Sort order
-  let sortOption = { featured: -1, createdAt: -1 };
-  if (sort === 'newest') sortOption = { createdAt: -1 };
-  if (sort === 'oldest') sortOption = { createdAt: 1 };
+  let sortOption = { featured: -1, publishedAt: -1, createdAt: -1 };
+  if (sort === 'newest') sortOption = { publishedAt: -1, createdAt: -1 };
+  if (sort === 'oldest') sortOption = { publishedAt: 1, createdAt: 1 };
   if (sort === 'longest') sortOption = { duration: -1 };
   if (sort === 'shortest') sortOption = { duration: 1 };
+  if (sort === 'popular') sortOption = { enrollmentCount: -1, publishedAt: -1 };
+  if (sort === 'recently_published' || sort === 'recent') sortOption = { publishedAt: -1 };
 
   const [items, total] = await Promise.all([
     Course.find(query)
-      .populate('instructor', 'name avatar')
+      .populate('instructor', 'name avatar email')
       .sort(sortOption)
       .skip(skip)
       .limit(limitNum)
@@ -82,34 +85,84 @@ const getCourses = async ({
     const enrollment = userEnrollmentsMap[course._id.toString()];
     return {
       ...course,
+      id: course._id.toString(),
       isEnrolled: !!enrollment,
       enrollmentStatus: enrollment ? enrollment.status : null,
       progressPercentage: enrollment ? enrollment.progressPercentage : 0,
     };
   });
 
+  const totalPages = Math.ceil(total / limitNum) || 1;
+
   return {
     items: enrichedItems,
+    courses: enrichedItems,
     page: pageNum,
     limit: limitNum,
     total,
-    totalPages: Math.ceil(total / limitNum) || 1,
+    totalCourses: total,
+    totalPages,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalCourses: total,
+      totalPages,
+    },
   };
 };
 
 /**
- * Get single published course by slug with full modules & lesson outline
+ * Get single published course by slug or ID with full modules & lesson outline
+ * Non-admin students receive 404 for unpublished courses.
  */
-const getCourseBySlug = async (slug, user = null) => {
-  const course = await Course.findOne({
-    slug: slug.toLowerCase().trim(),
-    isPublished: true,
-    status: 'PUBLISHED',
-  })
-    .populate('instructor', 'name avatar email')
-    .lean();
+const getCourseBySlug = async (slugOrId, user = null) => {
+  if (!slugOrId) {
+    throw new Error('COURSE_NOT_FOUND');
+  }
 
-  if (!course) {
+  const isObjectId = mongoose.Types.ObjectId.isValid(slugOrId);
+  const identifierFilter = isObjectId
+    ? { $or: [{ slug: slugOrId.toLowerCase().trim() }, { _id: slugOrId }] }
+    : { slug: slugOrId.toLowerCase().trim() };
+
+  // Determine if user has privileged preview rights (Admin or Course Owning Instructor)
+  const isPrivileged = user && (
+    ['ADMIN', 'SUPER_ADMIN'].includes(user.role?.toUpperCase()) ||
+    user.role?.toUpperCase() === 'INSTRUCTOR'
+  );
+
+  let course;
+  if (isPrivileged) {
+    course = await Course.findOne({
+      ...identifierFilter,
+      isDeleted: { $ne: true },
+    })
+      .populate('instructor', 'name avatar email')
+      .lean();
+
+    // If instructor is not owner and not admin, check if course is published
+    if (course && course.status !== 'PUBLISHED') {
+      const isOwner =
+        course.instructor?._id?.toString() === user._id?.toString() ||
+        course.instructor?.toString() === user._id?.toString();
+      const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(user.role?.toUpperCase());
+      if (!isOwner && !isAdmin) {
+        throw new Error('COURSE_NOT_FOUND');
+      }
+    }
+  } else {
+    course = await Course.findOne({
+      ...identifierFilter,
+      isPublished: true,
+      status: 'PUBLISHED',
+      isDeleted: { $ne: true },
+    })
+      .populate('instructor', 'name avatar email')
+      .lean();
+  }
+
+  if (!course || course.isDeleted) {
     throw new Error('COURSE_NOT_FOUND');
   }
 
@@ -196,12 +249,12 @@ const getCourseBySlug = async (slug, user = null) => {
 const getCourseCurriculum = async (courseId, user) => {
   let course;
   if (mongoose.Types.ObjectId.isValid(courseId)) {
-    course = await Course.findById(courseId).lean();
+    course = await Course.findOne({ _id: courseId, isDeleted: { $ne: true } }).lean();
   }
   if (!course) {
-    course = await Course.findOne({ slug: courseId }).lean();
+    course = await Course.findOne({ slug: courseId, isDeleted: { $ne: true } }).lean();
   }
-  if (!course || !course.isPublished) {
+  if (!course || !course.isPublished || course.isDeleted) {
     throw new Error('COURSE_NOT_FOUND');
   }
 

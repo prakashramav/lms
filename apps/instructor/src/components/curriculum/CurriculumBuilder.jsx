@@ -34,10 +34,13 @@ import {
 } from '../../services/instructorService';
 
 export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
+  const courseIdVal = course?._id || course?.course?._id;
+  const modulesList = course?.modules || course?.course?.modules || [];
+
   const [expandedModules, setExpandedModules] = useState(() => {
     const initial = {};
-    if (course.modules && course.modules.length > 0) {
-      course.modules.forEach((m) => {
+    if (modulesList && modulesList.length > 0) {
+      modulesList.forEach((m) => {
         initial[m._id] = true;
       });
     }
@@ -65,13 +68,18 @@ export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
   const handleAddModule = async (e) => {
     e.preventDefault();
     if (!newModuleTitle.trim()) return;
+    if (!courseIdVal || courseIdVal === 'undefined') {
+      setActionError('Course identifier is not ready. Please wait or refresh the page.');
+      return;
+    }
+
     setLoadingAction(true);
     setActionError(null);
     try {
-      await addModule(accessToken, course._id, {
+      await addModule(accessToken, courseIdVal, {
         title: newModuleTitle.trim(),
         description: newModuleDescription.trim(),
-        order: (course.modules?.length || 0) + 1,
+        order: (modulesList.length || 0) + 1,
       });
       setNewModuleTitle('');
       setNewModuleDescription('');
@@ -114,7 +122,11 @@ export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
   };
 
   const handleMoveModule = async (index, direction) => {
-    const modules = [...(course.modules || [])];
+    if (!courseIdVal || courseIdVal === 'undefined') {
+      setActionError('Course identifier is not ready.');
+      return;
+    }
+    const modules = [...modulesList];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= modules.length) return;
 
@@ -124,7 +136,7 @@ export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
     setLoadingAction(true);
     setActionError(null);
     try {
-      await reorderModules(accessToken, course._id, modules.map((m) => m._id));
+      await reorderModules(accessToken, courseIdVal, modules.map((m) => m._id));
       await onRefresh();
     } catch (err) {
       setActionError(err.message || 'Failed to reorder modules');
@@ -139,7 +151,7 @@ export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
     setLoadingAction(true);
     setActionError(null);
     try {
-      const moduleObj = course.modules.find((m) => m._id === moduleId);
+      const moduleObj = modulesList.find((m) => m._id === moduleId);
       const order = (moduleObj?.lessons?.length || 0) + 1;
 
       await addLesson(accessToken, moduleId, {
@@ -192,7 +204,7 @@ export default function CurriculumBuilder({ course, accessToken, onRefresh }) {
     }
   };
 
-  const modules = course.modules || [];
+  const modules = modulesList;
 
   return (
     <div className="space-y-6">

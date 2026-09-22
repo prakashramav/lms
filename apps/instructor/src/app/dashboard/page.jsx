@@ -50,7 +50,7 @@ export default function InstructorDashboardPage() {
     loadDashboard();
   }, [accessToken]);
 
-  const metrics = data?.metrics || {
+  const metrics = data?.metrics || data?.kpis || {
     totalCourses: 0,
     publishedCourses: 0,
     draftCourses: 0,

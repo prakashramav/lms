@@ -12,8 +12,8 @@ const Submission = require('../../models/submission.model');
  * Overview dashboard metrics for authenticated instructor
  */
 const getOverviewAnalytics = async (instructorId) => {
-  // Find all courses by instructor
-  const courses = await Course.find({ instructor: instructorId }).select('_id title isPublished status createdAt').lean();
+  // Find all non-deleted courses by instructor
+  const courses = await Course.find({ instructor: instructorId, isDeleted: { $ne: true } }).select('_id title isPublished status createdAt').lean();
   const courseIds = courses.map((c) => c._id);
 
   const totalCourses = courses.length;
@@ -21,16 +21,18 @@ const getOverviewAnalytics = async (instructorId) => {
   const draftCourses = courses.filter((c) => c.status === 'DRAFT').length;
 
   if (courseIds.length === 0) {
+    const kpis = {
+      totalCourses: 0,
+      publishedCourses: 0,
+      draftCourses: 0,
+      totalStudents: 0,
+      totalEnrollments: 0,
+      averageCompletion: 0,
+      averageAssessmentScore: 0,
+    };
     return {
-      kpis: {
-        totalCourses: 0,
-        publishedCourses: 0,
-        draftCourses: 0,
-        totalStudents: 0,
-        totalEnrollments: 0,
-        averageCompletion: 0,
-        averageAssessmentScore: 0,
-      },
+      kpis,
+      metrics: kpis,
       recentActivity: [],
       coursePerformance: [],
     };
@@ -137,16 +139,19 @@ const getOverviewAnalytics = async (instructorId) => {
     };
   });
 
+  const kpis = {
+    totalCourses,
+    publishedCourses,
+    draftCourses,
+    totalStudents,
+    totalEnrollments,
+    averageCompletion,
+    averageAssessmentScore,
+  };
+
   return {
-    kpis: {
-      totalCourses,
-      publishedCourses,
-      draftCourses,
-      totalStudents,
-      totalEnrollments,
-      averageCompletion,
-      averageAssessmentScore,
-    },
+    kpis,
+    metrics: kpis,
     recentActivity: activityList.slice(0, 10),
     coursePerformance: courseCards,
   };
@@ -156,7 +161,13 @@ const getOverviewAnalytics = async (instructorId) => {
  * Course detailed analytics
  */
 const getCourseAnalytics = async (courseId, instructorId) => {
-  const course = await Course.findOne({ _id: courseId, instructor: instructorId }).lean();
+  let courseQuery = { instructor: instructorId };
+  if (mongoose.Types.ObjectId.isValid(courseId)) {
+    courseQuery._id = courseId;
+  } else {
+    courseQuery.slug = courseId.toString().toLowerCase().trim();
+  }
+  const course = await Course.findOne(courseQuery).lean();
   if (!course) {
     const err = new Error('Course not found or unauthorized.');
     err.statusCode = 404;

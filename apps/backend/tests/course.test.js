@@ -312,4 +312,144 @@ describe('Course & LMS API Integration Tests', () => {
       expect(removeRes.body.data.bookmarked).toBe(false);
     });
   });
+
+  describe('Course Deletion & Student Visibility Shielding', () => {
+    let instructorB;
+    let tokenB;
+    let adminUser;
+    let adminToken;
+    let deletionCourse;
+
+    beforeEach(async () => {
+      instructorB = await User.create({
+        name: 'Second Instructor',
+        email: 'instructor.b@test.com',
+        password: 'Password123!',
+        role: 'INSTRUCTOR',
+        status: 'ACTIVE',
+      });
+      tokenB = tokenService.generateAccessToken(instructorB);
+
+      adminUser = await User.create({
+        name: 'Platform Admin',
+        email: 'admin.deletion@test.com',
+        password: 'Password123!',
+        role: 'ADMIN',
+        permissions: ['courses.read', 'courses.publish'],
+        status: 'ACTIVE',
+      });
+      adminToken = tokenService.generateAccessToken(adminUser);
+
+      deletionCourse = await Course.create({
+        title: 'Microservices Architecture',
+        slug: 'microservices-architecture',
+        shortDescription: 'Scalable backend patterns.',
+        description: 'Deep dive into microservices.',
+        category: 'Backend',
+        difficulty: 'ADVANCED',
+        instructor: instructorUser._id,
+        status: 'PUBLISHED',
+        isPublished: true,
+      });
+    });
+
+    it('rejects student from deleting a course with 403 Forbidden', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${studentToken}`);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('COURSE_DELETE_FORBIDDEN');
+    });
+
+    it('rejects unauthenticated user from deleting a course with 401 Unauthorized', async () => {
+      const res = await request(app).delete(`/api/v1/courses/${deletionCourse._id}`);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('rejects instructor from deleting another instructor course with 403 (IDOR Protection)', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('COURSE_DELETE_FORBIDDEN');
+    });
+
+    it('rejects deletion with invalid MongoDB ObjectId with 400 Bad Request', async () => {
+      const res = await request(app)
+        .delete('/api/v1/courses/undefined')
+        .set('Authorization', `Bearer ${instructorToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('INVALID_COURSE_ID');
+    });
+
+    it('returns 404 when attempting to delete a nonexistent course', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app)
+        .delete(`/api/v1/courses/${fakeId}`)
+        .set('Authorization', `Bearer ${instructorToken}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.code).toBe('COURSE_NOT_FOUND');
+    });
+
+    it('allows course owner instructor to delete their own course', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${instructorToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      // Student catalog must not return the deleted course
+      const listRes = await request(app).get('/api/v1/courses');
+      const foundInList = listRes.body.data.items.find(
+        (c) => c._id.toString() === deletionCourse._id.toString()
+      );
+      expect(foundInList).toBeUndefined();
+
+      // Student direct URL must return 404
+      const directRes = await request(app).get(`/api/v1/courses/${deletionCourse.slug}`);
+      expect(directRes.statusCode).toBe(404);
+
+      // Student curriculum player must return 404
+      const currRes = await request(app).get(`/api/v1/courses/${deletionCourse._id}/curriculum`);
+      expect(currRes.statusCode).toBe(404);
+
+      // Search results must exclude deleted course
+      const searchRes = await request(app).get('/api/v1/search?q=Microservices');
+      const foundInSearch = (searchRes.body.results || []).find(
+        (r) => r.id.toString() === deletionCourse._id.toString()
+      );
+      expect(foundInSearch).toBeUndefined();
+    });
+
+    it('allows Admin to delete any course regardless of instructor ownership', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      // Repeated deletion must return 404 (Idempotent)
+      const repeatRes = await request(app)
+        .delete(`/api/v1/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(repeatRes.statusCode).toBe(404);
+      expect(repeatRes.body.code).toBe('COURSE_NOT_FOUND');
+    });
+
+    it('allows Admin to delete course via dedicated /api/v1/admin/courses/:courseId route', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/admin/courses/${deletionCourse._id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+  });
 });

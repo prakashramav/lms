@@ -19,6 +19,7 @@ const {
   adminLimiter,
 } = require('./middlewares/rateLimit.middleware');
 const { getHealth, getReadiness, getLiveness } = require('./controllers/health.controller');
+const csrfProtection = require('./middlewares/csrf.middleware');
 const v1Routes = require('./routes/index');
 const notFound = require('./middlewares/notFound.middleware');
 const errorHandler = require('./middlewares/error.middleware');
@@ -93,9 +94,10 @@ app.get('/metrics', (req, res) => {
   res.status(200).json({ success: true, metrics: observability.getSnapshot() });
 });
 
-// 10. General API Rate Limiting & Idempotency Key Handling
+// 10. General API Rate Limiting, Idempotency Key Handling & CSRF Defense
 app.use('/api', generalLimiter);
 app.use('/api', idempotencyMiddleware);
+app.use('/api', csrfProtection);
 
 // 11. Tiered Route Rate Limiters
 app.use('/api/v1/auth', authLimiter);

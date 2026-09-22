@@ -35,7 +35,9 @@ import {
   Sparkles,
   Play,
   Copy,
+  Cpu,
 } from 'lucide-react';
+import InstructorWorkspaceBuilder from '../../../../../../components/workspace/InstructorWorkspaceBuilder';
 
 export default function LessonEditorPage() {
   const { courseId, lessonId } = useParams();
@@ -72,12 +74,17 @@ export default function LessonEditorPage() {
     setIsLoading(true);
     try {
       const c = await fetchCourseDetail(accessToken, courseId);
-      setCourse(c);
+      const courseObj = c?.course || c;
+      const mergedCourse = {
+        ...courseObj,
+        modules: c?.modules || courseObj?.modules || [],
+      };
+      setCourse(mergedCourse);
 
       // Locate lesson inside course modules
       let foundLesson = null;
-      if (c.modules) {
-        for (const mod of c.modules) {
+      if (mergedCourse.modules) {
+        for (const mod of mergedCourse.modules) {
           const l = (mod.lessons || []).find((item) => item._id === lessonId);
           if (l) {
             foundLesson = l;
@@ -435,6 +442,7 @@ export default function LessonEditorPage() {
                 { id: 'content', label: 'Written Content', icon: FileText },
                 { id: 'video', label: 'Video Resource', icon: Video },
                 { id: 'code', label: 'Code Sandbox & Snippet', icon: Code2 },
+                { id: 'workspace', label: 'Cloud IDE & Workspace', icon: Cpu },
                 { id: 'resources', label: 'File Attachments', icon: Paperclip },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -638,6 +646,19 @@ export default function LessonEditorPage() {
                   )}
                 </div>
               </div>
+            )}
+
+            {/* TAB CONTENT: CLOUD IDE & WORKSPACE STUDIO */}
+            {activeTab === 'workspace' && (
+              <InstructorWorkspaceBuilder
+                lessonId={lessonId}
+                courseId={courseId}
+                initialWorkspace={lesson?.workspace}
+                accessToken={accessToken}
+                onSave={(updatedWs) => {
+                  setLesson((prev) => ({ ...prev, workspace: updatedWs }));
+                }}
+              />
             )}
           </div>
         )}

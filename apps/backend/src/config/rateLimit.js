@@ -12,7 +12,7 @@ const rateLimitConfig = {
   },
   auth: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: env.isTest ? 10000 : 25, // Stricter for login/register/password-reset
+    max: env.isProduction ? 50 : 10000, // Generous in development/testing to prevent developer lockout
     message: {
       success: false,
       message: 'Too many authentication attempts from this IP. Please try again in 15 minutes.',

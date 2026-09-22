@@ -16,7 +16,10 @@ function StudentLoginForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  const rawRedirect = searchParams.get('redirect');
+  const safeRedirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('\\')
+    ? rawRedirect
+    : '/dashboard';
   const roleMismatch = searchParams.get('error') === 'role_mismatch';
 
   const handleSubmit = async (e) => {
@@ -26,7 +29,7 @@ function StudentLoginForm() {
 
     try {
       await login(email, password);
-      router.push(redirectUrl);
+      router.push(safeRedirect);
     } catch (err) {
       setLocalError(err.message || 'Login failed. Please check your credentials.');
     } finally {

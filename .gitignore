@@ -36,6 +36,9 @@ tmp/
 temp/
 backups/
 apps/backend/backups/
+uploads/
+**/uploads/
+cookies.txt
 
 # OS Files
 .DS_Store

@@ -6,18 +6,17 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
  * @returns {Promise<object>} Dashboard payload
  */
 export async function fetchStudentDashboard(accessToken) {
-  if (!accessToken) {
-    const err = new Error('Authentication required to load dashboard');
-    err.status = 401;
-    throw err;
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Portal': 'student',
+  };
+  if (accessToken && accessToken !== 'cookie-session') {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const res = await fetch(`${API_BASE_URL}/student/dashboard`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
     credentials: 'include',
   });
 

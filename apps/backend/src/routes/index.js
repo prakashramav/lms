@@ -63,5 +63,9 @@ router.use('/diagnostic', diagnosticRoutes);
 router.use('/spaced-review', spacedReviewRoutes);
 router.use('/cohorts', cohortRoutes);
 
+// Cloud IDE & Learning Workspace Platform
+const workspaceRoutes = require('./api/v1/workspace.route');
+router.use('/workspaces', workspaceRoutes);
+
 module.exports = router;
 

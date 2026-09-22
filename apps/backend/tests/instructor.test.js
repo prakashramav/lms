@@ -12,6 +12,10 @@ const { Problem } = require('../src/models/problem.model');
 const { TestCase } = require('../src/models/testCase.model');
 const { Enrollment } = require('../src/models/enrollment.model');
 const AuditLog = require('../src/models/auditLog.model');
+const Resource = require('../src/models/resource.model');
+const Certificate = require('../src/models/certificate.model');
+const { VectorChunk } = require('../src/models/vectorChunk.model');
+const Bookmark = require('../src/models/bookmark.model');
 const tokenService = require('../src/services/token.service');
 
 let mongoServer;
@@ -47,6 +51,10 @@ describe('Phase 8 — Instructor Platform Integration & Security Tests', () => {
       TestCase.deleteMany({}),
       Enrollment.deleteMany({}),
       AuditLog.deleteMany({}),
+      Resource.deleteMany({}),
+      Certificate.deleteMany({}),
+      VectorChunk.deleteMany({}),
+      Bookmark.deleteMany({}),
     ]);
 
     instructorA = await User.create({
@@ -203,6 +211,62 @@ describe('Phase 8 — Instructor Platform Integration & Security Tests', () => {
       const mod = res.body.data.module;
       expect(mod.title).toBe('Module 1: Event Loop Internals');
       expect(mod.courseId.toString()).toBe(course._id.toString());
+    });
+
+    it('adds module using course slug instead of ObjectId', async () => {
+      const res = await request(app)
+        .post(`/api/v1/instructor/courses/${course.slug}/modules`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          title: 'Module via Slug',
+          order: 2,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      const mod = res.body.data.module;
+      expect(mod.title).toBe('Module via Slug');
+      expect(mod.courseId.toString()).toBe(course._id.toString());
+    });
+
+    it('rejects adding module with invalid courseId parameter "undefined" with 400', async () => {
+      const res = await request(app)
+        .post('/api/v1/instructor/courses/undefined/modules')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          title: 'Module with Undefined Course',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 404 when adding module to nonexistent course', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId();
+      const res = await request(app)
+        .post(`/api/v1/instructor/courses/${nonExistentId}/modules`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          title: 'Ghost Module',
+        });
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('COURSE_NOT_FOUND');
+    });
+
+    it('prevents Instructor B from adding module to Instructor A course (IDOR)', async () => {
+      const res = await request(app)
+        .post(`/api/v1/instructor/courses/${course._id}/modules`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({
+          title: 'Hacked Module',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('FORBIDDEN_COURSE_ACCESS');
     });
 
     it('reorders modules within a course', async () => {
@@ -491,6 +555,174 @@ describe('Phase 8 — Instructor Platform Integration & Security Tests', () => {
       expect(logs.length).toBeGreaterThanOrEqual(1);
       expect(logs[0].action).toBe('COURSE_CREATED');
       expect(logs[0].actorRole).toBe('INSTRUCTOR');
+    });
+  });
+
+  // 9. COURSE DELETION & CASCADE SAFETY
+  describe('Course Deletion & Cascading Dependency Safety', () => {
+    let course;
+    let moduleDoc;
+    let lessonDoc;
+    let resourceDoc;
+    let vectorChunk;
+
+    beforeEach(async () => {
+      course = await Course.create({
+        title: 'Complete Distributed Systems',
+        slug: 'complete-distributed-systems',
+        shortDescription: 'Desc',
+        description: 'Full course description',
+        category: 'Backend',
+        instructor: instructorA._id,
+        status: 'PUBLISHED',
+      });
+
+      moduleDoc = await Module.create({
+        courseId: course._id,
+        title: 'Module 1',
+        order: 1,
+      });
+
+      lessonDoc = await Lesson.create({
+        courseId: course._id,
+        moduleId: moduleDoc._id,
+        title: 'Lesson 1',
+        slug: 'lesson-1',
+        type: 'ARTICLE',
+        order: 1,
+      });
+
+      resourceDoc = await Resource.create({
+        courseId: course._id,
+        lessonId: lessonDoc._id,
+        name: 'Slides PDF',
+        url: 'https://cdn.example.com/slides.pdf',
+        type: 'PDF',
+        createdBy: instructorA._id,
+      });
+
+      vectorChunk = await VectorChunk.create({
+        documentType: 'COURSE',
+        courseId: course._id,
+        moduleId: moduleDoc._id,
+        lessonId: lessonDoc._id,
+        title: 'Distributed Systems Chunk',
+        content: 'Raft consensus algorithm explanation...',
+        tokensCount: 50,
+        embedding: [0.1, 0.2, 0.3],
+      });
+
+      await Certificate.create({
+        certificateId: 'CERT-TEST-12345',
+        studentId: studentUser._id,
+        courseId: course._id,
+        studentName: 'Student Charlie',
+        courseTitle: 'Complete Distributed Systems',
+        verificationUrl: 'https://verify.example.com/CERT-TEST-12345',
+      });
+
+      await Enrollment.create({
+        studentId: studentUser._id,
+        courseId: course._id,
+        status: 'ACTIVE',
+      });
+    });
+
+    it('permanently deletes course and child entities while preserving student certificates', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/instructor/courses/${course._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.deletedCourseId.toString()).toBe(course._id.toString());
+
+      // 1. Course document deleted
+      const foundCourse = await Course.findById(course._id);
+      expect(foundCourse).toBeNull();
+
+      // 2. Modules deleted
+      const foundModules = await Module.find({ courseId: course._id });
+      expect(foundModules.length).toBe(0);
+
+      // 3. Lessons deleted
+      const foundLessons = await Lesson.find({ courseId: course._id });
+      expect(foundLessons.length).toBe(0);
+
+      // 4. Resources deleted
+      const foundResources = await Resource.find({ courseId: course._id });
+      expect(foundResources.length).toBe(0);
+
+      // 5. Vector chunks deleted
+      const foundChunks = await VectorChunk.find({ courseId: course._id });
+      expect(foundChunks.length).toBe(0);
+
+      // 6. Enrollments cleaned up
+      const foundEnrollments = await Enrollment.find({ courseId: course._id });
+      expect(foundEnrollments.length).toBe(0);
+
+      // 7. CRITICAL: Certificate MUST be preserved!
+      const preservedCert = await Certificate.findOne({ certificateId: 'CERT-TEST-12345' });
+      expect(preservedCert).not.toBeNull();
+      expect(preservedCert.courseTitle).toBe('Complete Distributed Systems');
+      expect(preservedCert.studentName).toBe('Student Charlie');
+
+      // 8. Audit log created
+      const auditLog = await AuditLog.findOne({
+        action: 'COURSE_DELETED',
+        resourceId: course._id,
+      });
+      expect(auditLog).not.toBeNull();
+      expect(auditLog.metadata.title).toBe('Complete Distributed Systems');
+    });
+
+    it('denies course deletion to unauthorized instructor with 403 Forbidden', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/instructor/courses/${course._id}`)
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+
+      // Verify course still exists
+      const foundCourse = await Course.findById(course._id);
+      expect(foundCourse).not.toBeNull();
+    });
+
+    it('rejects delete course with invalid/undefined courseId with 400 Validation Error', async () => {
+      const res = await request(app)
+        .delete('/api/v1/instructor/courses/undefined')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 404 when attempting to delete a nonexistent course', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId();
+      const res = await request(app)
+        .delete(`/api/v1/instructor/courses/${nonExistentId}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('COURSE_NOT_FOUND');
+    });
+
+    it('safely handles repeated/duplicate deletion of the same course with 404', async () => {
+      // First deletion
+      const res1 = await request(app)
+        .delete(`/api/v1/instructor/courses/${course._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res1.status).toBe(200);
+
+      // Second deletion attempt on the same ID
+      const res2 = await request(app)
+        .delete(`/api/v1/instructor/courses/${course._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(res2.status).toBe(404);
+      expect(res2.body.errorCode).toBe('COURSE_NOT_FOUND');
     });
   });
 });

@@ -59,6 +59,36 @@ const assignmentSchema = new mongoose.Schema(
         ref: 'Problem',
       },
     ],
+    version: {
+      type: String,
+      default: '1.0',
+    },
+    workspace: {
+      enabled: { type: Boolean, default: false },
+      type: {
+        type: String,
+        enum: [
+          'NONE',
+          'CODE_RUNNER',
+          'CLOUD_IDE',
+          'DATABASE_LAB',
+          'DATA_SCIENCE_LAB',
+          'DEEP_LEARNING_LAB',
+          'GENAI_LAB',
+        ],
+        default: 'NONE',
+      },
+      templateId: { type: String, default: null },
+      templateVersion: { type: String, default: '1.0' },
+      starterFiles: { type: Array, default: [] },
+      tests: { type: Array, default: [] },
+      resourceProfile: { type: String, enum: ['BASIC', 'STANDARD', 'ML', 'GPU'], default: 'STANDARD' },
+      gradingPolicy: {
+        type: String,
+        enum: ['AUTO', 'MANUAL', 'HYBRID', 'PRACTICE'],
+        default: 'AUTO',
+      },
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

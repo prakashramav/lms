@@ -29,7 +29,7 @@ const getCommandPaletteResults = async (req, res, next) => {
     const regex = new RegExp(q, 'i');
 
     const [courses, jobs, skills, projects] = await Promise.all([
-      Course.find({ status: 'PUBLISHED', title: regex }).limit(5).select('title slug thumbnail category').lean(),
+      Course.find({ status: 'PUBLISHED', isPublished: true, isDeleted: { $ne: true }, title: regex }).limit(5).select('title slug thumbnail category').lean(),
       Job.find({ status: 'PUBLISHED', title: regex }).limit(5).select('title companyId location remoteType').lean(),
       Skill.find({ name: regex }).limit(5).select('name slug category').lean(),
       ProjectShowcase.find({ visibility: 'PUBLIC', title: regex }).limit(5).select('title techStack likesCount').lean(),

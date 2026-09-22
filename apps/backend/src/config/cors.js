@@ -22,7 +22,7 @@ const corsConfig = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Client-Version'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Client-Version', 'X-Portal'],
   exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   maxAge: 86400, // 24 hours preflight cache
 };

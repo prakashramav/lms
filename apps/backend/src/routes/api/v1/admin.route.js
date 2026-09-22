@@ -68,6 +68,7 @@ router.post('/courses/:courseId/publish', requirePermission('courses.publish'), 
 router.post('/courses/:courseId/unpublish', requirePermission('courses.publish'), adminController.unpublishCourse);
 router.post('/courses/:courseId/archive', requirePermission('courses.publish'), adminController.archiveCourse);
 router.post('/courses/:courseId/flag', requirePermission('courses.review'), adminController.flagCourse);
+router.delete('/courses/:courseId', requirePermission('courses.publish'), adminController.deleteCourse);
 
 // ==========================================
 // 5. ASSESSMENTS & CODING PROBLEMS
@@ -135,7 +136,14 @@ router.patch('/career/paths/:careerPathId', careerController.updateCareerPath);
 const dataQualityController = require('../../../controllers/dataQuality.controller');
 router.get('/data-quality/scan', requirePermission('settings.manage'), dataQualityController.scanDataQuality);
 router.post('/data-quality/preview', requirePermission('settings.manage'), dataQualityController.previewDataRepair);
-router.post('/data-quality/repair', requirePermission('settings.manage'), dataQualityController.executeDataRepair);
+// ==========================================
+// 14. WORKSPACE GOVERNANCE & TELEMETRY
+// ==========================================
+const { adminWorkspaceController } = require('../../../controllers/adminWorkspace.controller');
+router.get('/workspaces', requirePermission('settings.manage'), adminWorkspaceController.listAllWorkspaces);
+router.get('/workspaces/metrics', requirePermission('settings.manage'), adminWorkspaceController.getSystemMetrics);
+router.patch('/workspaces/templates/:templateId/status', requirePermission('settings.manage'), adminWorkspaceController.toggleTemplate);
+router.post('/workspaces/:id/terminate', requirePermission('settings.manage'), adminWorkspaceController.forceTerminateWorkspace);
 
 module.exports = router;
 

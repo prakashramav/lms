@@ -16,7 +16,15 @@ const { logAction } = require('../services/audit.service');
 const getCourses = async (req, res, next) => {
   try {
     const data = await courseService.getInstructorCourses(req.user._id, req.query);
-    res.status(200).json({ success: true, data });
+    res.status(200).json({
+      success: true,
+      data: {
+        ...data,
+        courses: data.items,
+      },
+      courses: data.items,
+      total: data.total,
+    });
   } catch (error) {
     next(error);
   }
@@ -25,10 +33,15 @@ const getCourses = async (req, res, next) => {
 const createCourse = async (req, res, next) => {
   try {
     const course = await courseService.createCourse(req.user._id, req.body);
+    const courseObj = course && typeof course.toObject === 'function' ? course.toObject() : course;
     res.status(201).json({
       success: true,
       message: 'Course created successfully.',
-      data: { course },
+      data: {
+        course,
+        ...courseObj,
+      },
+      course,
     });
   } catch (error) {
     next(error);
@@ -63,6 +76,15 @@ const publishCourse = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Course published successfully. It is now accessible to students.',
+      course: {
+        id: course._id,
+        title: course.title,
+        slug: course.slug,
+        status: (course.status || 'PUBLISHED').toLowerCase(),
+        publishedAt: course.publishedAt,
+        publishedBy: course.publishedBy,
+        publishedByRole: 'instructor',
+      },
       data: { course },
     });
   } catch (error) {
@@ -90,6 +112,21 @@ const archiveCourse = async (req, res, next) => {
       success: true,
       message: 'Course archived successfully.',
       data: { course },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteCourse = async (req, res, next) => {
+  try {
+    const result = await courseService.deleteCourse(req.params.courseId, req.user._id, req.user.role);
+    res.status(200).json({
+      success: true,
+      message: result.message || 'Course deleted successfully.',
+      data: {
+        deletedCourseId: result.deletedCourseId,
+      },
     });
   } catch (error) {
     next(error);
@@ -668,6 +705,7 @@ module.exports = {
   publishCourse,
   unpublishCourse,
   archiveCourse,
+  deleteCourse,
   duplicateCourse,
   addModule,
   updateModule,

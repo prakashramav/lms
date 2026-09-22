@@ -47,6 +47,13 @@ const errorHandler = (err, req, res, next) => {
     message = 'Authentication token has expired';
   }
 
+  // Handle CORS & Origin Disallowed Errors
+  if (err.message && err.message.includes('Blocked by CORS policy')) {
+    statusCode = 403;
+    errorCode = 'CSRF_BLOCKED';
+    message = 'Forbidden: Cross-Origin / CSRF access disallowed';
+  }
+
   // Log error with context in non-test mode
   if (!env.isTest) {
     console.error(`[Error] [ReqID: ${requestId}] ${req.method} ${req.originalUrl}:`, {

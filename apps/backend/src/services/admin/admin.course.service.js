@@ -211,8 +211,12 @@ class AdminCourseService {
 
     course.status = 'PUBLISHED';
     course.isPublished = true;
+    course.isPublic = true;
+    course.isDeleted = false;
     course.publishedAt = new Date();
     course.publishedBy = adminUser._id;
+    course.publishedByRole = 'admin';
+    course.version = (course.version || 1) + 1;
     await course.save();
 
     await adminAuditService.recordAction({
@@ -310,6 +314,14 @@ class AdminCourseService {
     });
 
     return course;
+  }
+
+  /**
+   * Delete course as administrator with full authority
+   */
+  async deleteCourse(courseId, adminUser, req = null, reason = null) {
+    const courseDeletionService = require('../course.deletion.service');
+    return await courseDeletionService.deleteCourse(courseId, adminUser, { reason });
   }
 
   /**

@@ -4,6 +4,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../src/app');
 const { User } = require('../src/models/user.model');
 const RefreshToken = require('../src/models/refreshToken.model');
+const tokenService = require('../src/services/token.service');
 
 let mongoServer;
 
@@ -24,8 +25,17 @@ afterEach(async () => {
 });
 
 describe('Authentication & RBAC API', () => {
+  const getCookieValue = (res, cookieName) => {
+    const cookies = res.headers['set-cookie'];
+    if (!cookies) return null;
+    const cookie = cookies.find((c) => c.startsWith(`${cookieName}=`));
+    if (!cookie) return null;
+    const match = cookie.match(new RegExp(`${cookieName}=([^;]+)`));
+    return match ? match[1] : null;
+  };
+
   describe('POST /api/v1/auth/register', () => {
-    it('should register a student successfully with role STUDENT and return tokens', async () => {
+    it('should register a student successfully with role STUDENT and set 7-day HTTP-only cookie', async () => {
       const res = await request(app)
         .post('/api/v1/auth/register')
         .send({
@@ -39,13 +49,12 @@ describe('Authentication & RBAC API', () => {
       expect(res.body.data.user.email).toBe('jane@example.com');
       expect(res.body.data.user.role).toBe('STUDENT');
       expect(res.body.data.user.password).toBeUndefined();
-      expect(res.body.data.accessToken).toBeDefined();
-      expect(res.body.data.refreshToken).toBeDefined();
 
-      // Check cookie was set
+      // Check HTTP-only auth and refresh cookies were set
       const cookies = res.headers['set-cookie'];
       expect(cookies).toBeDefined();
-      expect(cookies[0]).toMatch(/refreshToken=/);
+      expect(cookies.some((c) => c.startsWith('auth_token='))).toBe(true);
+      expect(cookies.some((c) => c.startsWith('refreshToken='))).toBe(true);
     });
 
     it('should prevent privilege escalation: registering with role ADMIN still yields role STUDENT', async () => {
@@ -60,6 +69,23 @@ describe('Authentication & RBAC API', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.data.user.role).toBe('STUDENT');
+    });
+
+    it('should allow registering with role INSTRUCTOR and set 7-day HTTP-only cookie', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          name: 'Professor Smith',
+          email: 'prof.smith@example.com',
+          password: 'Password123!',
+          role: 'INSTRUCTOR',
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.role).toBe('INSTRUCTOR');
+      const cookies = res.headers['set-cookie'];
+      expect(cookies.some((c) => c.startsWith('auth_token='))).toBe(true);
     });
 
     it('should reject duplicate email with 409', async () => {
@@ -110,7 +136,7 @@ describe('Authentication & RBAC API', () => {
       });
     });
 
-    it('should login with valid credentials', async () => {
+    it('should login with valid credentials and set HTTP-only cookie', async () => {
       const res = await request(app).post('/api/v1/auth/login').send({
         email: 'student@example.com',
         password: 'Password123!',
@@ -118,8 +144,11 @@ describe('Authentication & RBAC API', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.accessToken).toBeDefined();
       expect(res.body.data.user.email).toBe('student@example.com');
+
+      const cookies = res.headers['set-cookie'];
+      expect(cookies).toBeDefined();
+      expect(cookies.some((c) => c.startsWith('auth_token='))).toBe(true);
     });
 
     it('should reject invalid password with 401', async () => {
@@ -162,13 +191,15 @@ describe('Authentication & RBAC API', () => {
     });
 
     it('should return user profile when valid Bearer token is provided', async () => {
-      const reg = await request(app).post('/api/v1/auth/register').send({
+      const user = await User.create({
         name: 'Profile User',
         email: 'profile@example.com',
         password: 'Password123!',
+        role: 'STUDENT',
+        status: 'ACTIVE',
       });
 
-      const token = reg.body.data.accessToken;
+      const token = tokenService.generateAccessToken(user);
 
       const res = await request(app)
         .get('/api/v1/auth/me')
@@ -181,23 +212,27 @@ describe('Authentication & RBAC API', () => {
   });
 
   describe('Refresh Token Rotation & Logout', () => {
-    it('should rotate refresh token and provide new access token', async () => {
-      const reg = await request(app).post('/api/v1/auth/register').send({
+    it('should rotate refresh token and provide new session', async () => {
+      const user = await User.create({
         name: 'Refresh Tester',
         email: 'refresh@example.com',
         password: 'Password123!',
+        role: 'STUDENT',
+        status: 'ACTIVE',
       });
 
-      const rawRefreshToken = reg.body.data.refreshToken;
+      const { rawToken: rawRefreshToken } = await tokenService.createRefreshToken(user._id, null, user.role);
 
       const refreshRes = await request(app)
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: rawRefreshToken });
 
       expect(refreshRes.statusCode).toBe(200);
-      expect(refreshRes.body.data.accessToken).toBeDefined();
-      expect(refreshRes.body.data.refreshToken).toBeDefined();
-      expect(refreshRes.body.data.refreshToken).not.toBe(rawRefreshToken);
+      expect(refreshRes.body.success).toBe(true);
+
+      const cookies = refreshRes.headers['set-cookie'];
+      expect(cookies).toBeDefined();
+      expect(cookies.some((c) => c.startsWith('auth_token='))).toBe(true);
 
       // Re-using the old refresh token must be rejected (replay attack prevention)
       const replayRes = await request(app)
@@ -209,13 +244,15 @@ describe('Authentication & RBAC API', () => {
     });
 
     it('should logout and invalidate refresh token', async () => {
-      const reg = await request(app).post('/api/v1/auth/register').send({
+      const user = await User.create({
         name: 'Logout Tester',
         email: 'logout@example.com',
         password: 'Password123!',
+        role: 'STUDENT',
+        status: 'ACTIVE',
       });
 
-      const rawRefreshToken = reg.body.data.refreshToken;
+      const { rawToken: rawRefreshToken } = await tokenService.createRefreshToken(user._id, null, user.role);
 
       const logoutRes = await request(app)
         .post('/api/v1/auth/logout')
@@ -262,14 +299,9 @@ describe('Authentication & RBAC API', () => {
         status: 'ACTIVE',
       });
 
-      const sLogin = await request(app).post('/api/v1/auth/login').send({ email: 's@test.com', password: 'Password123!' });
-      studentToken = sLogin.body.data.accessToken;
-
-      const iLogin = await request(app).post('/api/v1/auth/login').send({ email: 'i@test.com', password: 'Password123!' });
-      instructorToken = iLogin.body.data.accessToken;
-
-      const aLogin = await request(app).post('/api/v1/auth/login').send({ email: 'a@test.com', password: 'Password123!' });
-      adminToken = aLogin.body.data.accessToken;
+      studentToken = tokenService.generateAccessToken(student);
+      instructorToken = tokenService.generateAccessToken(instructor);
+      adminToken = tokenService.generateAccessToken(admin);
     });
 
     it('should deny STUDENT access to Admin endpoint with 403 Forbidden', async () => {
@@ -343,7 +375,8 @@ describe('Authentication & RBAC API', () => {
         password: 'BrandNewPassword456!',
       });
       expect(newLogin.statusCode).toBe(200);
-      expect(newLogin.body.data.accessToken).toBeDefined();
+      const cookies = newLogin.headers['set-cookie'];
+      expect(cookies.some((c) => c.startsWith('auth_token='))).toBe(true);
     });
   });
 });

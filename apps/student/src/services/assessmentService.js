@@ -1,5 +1,14 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
+const originalFetch = typeof globalThis !== 'undefined' && globalThis.fetch ? globalThis.fetch.bind(globalThis) : fetch;
+
+function authFetch(url, init = {}) {
+  return originalFetch(url, {
+    ...init,
+    credentials: 'include',
+  });
+}
+
 function getAuthHeaders(accessToken) {
   const headers = { 'Content-Type': 'application/json' };
   if (accessToken) {
@@ -24,7 +33,7 @@ export async function fetchAssessments(
   if (difficulty && difficulty !== 'all') params.set('difficulty', difficulty);
   if (type && type !== 'all') params.set('type', type);
 
-  const res = await fetch(`${API_BASE_URL}/assessments?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments?${params.toString()}`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',
@@ -41,7 +50,7 @@ export async function fetchAssessments(
  * Fetch assessment details and student's attempt stats
  */
 export async function fetchAssessmentById(assessmentId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/${assessmentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/${assessmentId}`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',
@@ -62,7 +71,7 @@ export async function startAssessmentAttempt(assessmentId, accessToken) {
     throw new Error('Authentication required to start assessment');
   }
 
-  const res = await fetch(`${API_BASE_URL}/assessments/${assessmentId}/attempts`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/${assessmentId}/attempts`, {
     method: 'POST',
     headers: getAuthHeaders(accessToken),
   });
@@ -78,7 +87,7 @@ export async function startAssessmentAttempt(assessmentId, accessToken) {
  * Retrieve an active attempt
  */
 export async function fetchAttempt(attemptId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/attempts/${attemptId}`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/attempts/${attemptId}`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',
@@ -95,7 +104,7 @@ export async function fetchAttempt(attemptId, accessToken) {
  * Auto-save / patch answer during attempt
  */
 export async function saveAttemptAnswer(attemptId, { questionId, selectedAnswers }, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/answers`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/answers`, {
     method: 'PATCH',
     headers: getAuthHeaders(accessToken),
     body: JSON.stringify({ questionId, selectedAnswers }),
@@ -112,7 +121,7 @@ export async function saveAttemptAnswer(attemptId, { questionId, selectedAnswers
  * Submit assessment attempt
  */
 export async function submitAssessmentAttempt(attemptId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/submit`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/submit`, {
     method: 'POST',
     headers: getAuthHeaders(accessToken),
   });
@@ -128,7 +137,7 @@ export async function submitAssessmentAttempt(attemptId, accessToken) {
  * Fetch assessment attempt result summary
  */
 export async function fetchAttemptResult(attemptId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/result`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/result`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',
@@ -145,7 +154,7 @@ export async function fetchAttemptResult(attemptId, accessToken) {
  * Fetch assessment attempt review with explanations
  */
 export async function fetchAttemptReview(attemptId, accessToken) {
-  const res = await fetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/review`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/attempts/${attemptId}/review`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',
@@ -166,7 +175,7 @@ export async function fetchAssessmentHistory({ page = 1, limit = 10 } = {}, acce
   if (page) params.set('page', page);
   if (limit) params.set('limit', limit);
 
-  const res = await fetch(`${API_BASE_URL}/assessments/history?${params.toString()}`, {
+  const res = await authFetch(`${API_BASE_URL}/assessments/history?${params.toString()}`, {
     method: 'GET',
     headers: getAuthHeaders(accessToken),
     cache: 'no-store',

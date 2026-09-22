@@ -54,7 +54,7 @@ const getRecommendedProjects = async (studentId) => {
  * Recommends courses tailored to student skill gaps
  */
 const getRecommendedCourses = async (studentId, limit = 4) => {
-  const courses = await Course.find({ status: 'PUBLISHED' })
+  const courses = await Course.find({ status: 'PUBLISHED', isPublished: true, isDeleted: { $ne: true } })
     .limit(limit)
     .select('title slug thumbnail category difficulty pricingType averageRating')
     .lean();

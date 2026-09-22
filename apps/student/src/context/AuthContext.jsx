@@ -1,120 +1,116 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
-function isTokenExpired(token) {
-  if (!token || typeof token !== 'string') return true;
+const getStoredStudentUser = () => {
+  if (typeof window === 'undefined') return null;
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-    const payload = JSON.parse(atob(parts[1]));
-    // Buffer by 30 seconds
-    return payload.exp * 1000 < Date.now() + 30000;
-  } catch {
-    return true;
-  }
-}
+    const raw = localStorage.getItem('apex_student_user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && (parsed.role === 'STUDENT' || !parsed.role)) {
+      return parsed;
+    }
+  } catch {}
+  return null;
+};
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(getStoredStudentUser);
+  const [isLoading, setIsLoading] = useState(() => !getStoredStudentUser());
   const [error, setError] = useState(null);
 
-  const refreshAccessToken = async () => {
+  /**
+   * Fetch current user profile via 7-day HTTP-only cookie
+   * Backend cookie is the single source of truth.
+   */
+  const refreshUser = useCallback(async () => {
     try {
-      const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('apex_student_refresh_token') : null;
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'student',
+        },
         credentials: 'include',
-        body: JSON.stringify({ refreshToken: storedRefreshToken || undefined }),
+        cache: 'no-store',
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.data?.accessToken) {
-        throw new Error(data.message || 'Session expired');
+      if (res.status === 401) {
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('apex_student_user');
+        }
+        return null;
       }
 
-      const newToken = data.data.accessToken;
-      setAccessToken(newToken);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('apex_student_token', newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem('apex_student_refresh_token', data.data.refreshToken);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to authenticate');
+      }
+
+      const userData = data.user || data.data?.user;
+      if (userData && userData.role && userData.role !== 'STUDENT') {
+        // Cross-portal safety: ensure student portal only binds student accounts
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('apex_student_user');
         }
+        return null;
       }
-      return newToken;
+
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_student_user', JSON.stringify(userData));
+      }
+      return userData;
     } catch {
-      setUser(null);
-      setAccessToken(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('apex_student_token');
-        localStorage.removeItem('apex_student_refresh_token');
-        localStorage.removeItem('apex_student_user');
-      }
       return null;
     }
-  };
+  }, []);
 
-  // Restore session from localStorage on initial load
+  // Initialize session on mount exclusively via HTTP-only cookie
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        const storedToken = localStorage.getItem('apex_student_token');
-        const storedUser = localStorage.getItem('apex_student_user');
-        const storedRefresh = localStorage.getItem('apex_student_refresh_token');
-
-        if (storedToken && storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-
-          // Prevent cross-portal role pollution (e.g. admin/instructor session in student app)
-          if (parsedUser.role && parsedUser.role !== 'STUDENT') {
-            localStorage.removeItem('apex_student_token');
-            localStorage.removeItem('apex_student_user');
-            localStorage.removeItem('apex_student_refresh_token');
-            setUser(null);
-            setAccessToken(null);
-            return;
-          }
-
-          if (!isTokenExpired(storedToken)) {
-            setAccessToken(storedToken);
-            setUser(parsedUser);
-          } else if (storedRefresh) {
-            // Token expired, attempt silent renewal
-            const refreshed = await refreshAccessToken();
-            if (refreshed) {
-              setUser(parsedUser);
-            }
-          } else {
-            // Expired with no refresh token
-            localStorage.removeItem('apex_student_token');
-            localStorage.removeItem('apex_student_user');
-            localStorage.removeItem('apex_student_refresh_token');
-          }
+      // Purge any legacy localStorage tokens to prevent raw JWT leakage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('apex_student_token');
+          localStorage.removeItem('apex_student_refresh_token');
+          localStorage.removeItem('accessToken');
+        } catch {
+          // Ignore localStorage access errors
         }
-      } catch (e) {
-        console.error('Failed to restore auth session:', e);
+      }
+
+      try {
+        await refreshUser();
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [refreshUser]);
 
+  /**
+   * Student Login
+   * Browser stores token in HTTP-only cookie; React context stores only user profile
+   */
   const login = async (email, password) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'student',
+        },
         credentials: 'include',
         body: JSON.stringify({ email, password, expectedRole: 'STUDENT' }),
       });
@@ -124,14 +120,12 @@ export function AuthProvider({ children }) {
         throw new Error(data.message || 'Login failed');
       }
 
-      setUser(data.data.user);
-      setAccessToken(data.data.accessToken);
-      localStorage.setItem('apex_student_token', data.data.accessToken);
-      if (data.data.refreshToken) {
-        localStorage.setItem('apex_student_refresh_token', data.data.refreshToken);
+      const userData = data.user || data.data?.user;
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_student_user', JSON.stringify(userData));
       }
-      localStorage.setItem('apex_student_user', JSON.stringify(data.data.user));
-      return data.data;
+      return userData;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -140,13 +134,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Student Registration
+   */
   const register = async (name, email, password) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Portal': 'student',
+        },
         credentials: 'include',
         body: JSON.stringify({ name, email, password }),
       });
@@ -156,14 +156,12 @@ export function AuthProvider({ children }) {
         throw new Error(data.message || 'Registration failed');
       }
 
-      setUser(data.data.user);
-      setAccessToken(data.data.accessToken);
-      localStorage.setItem('apex_student_token', data.data.accessToken);
-      if (data.data.refreshToken) {
-        localStorage.setItem('apex_student_refresh_token', data.data.refreshToken);
+      const userData = data.user || data.data?.user;
+      setUser(userData);
+      if (typeof window !== 'undefined' && userData) {
+        localStorage.setItem('apex_student_user', JSON.stringify(userData));
       }
-      localStorage.setItem('apex_student_user', JSON.stringify(data.data.user));
-      return data.data;
+      return userData;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -172,20 +170,24 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Student Logout
+   * Backend clears HTTP-only cookie and revokes session
+   */
   const logout = async () => {
     try {
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
+        headers: { 'X-Portal': 'student' },
         credentials: 'include',
       });
     } catch (e) {
       console.warn('Logout API call failed:', e);
     } finally {
       setUser(null);
-      setAccessToken(null);
-      localStorage.removeItem('apex_student_token');
-      localStorage.removeItem('apex_student_refresh_token');
-      localStorage.removeItem('apex_student_user');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('apex_student_user');
+      }
     }
   };
 
@@ -193,14 +195,15 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        accessToken,
+        accessToken: user ? (user._id || user.id || 'cookie-session') : null,
         isAuthenticated: !!user,
         isLoading,
         error,
         login,
         register,
         logout,
-        refreshAccessToken,
+        refreshUser,
+        refreshAccessToken: refreshUser,
         setError,
       }}
     >

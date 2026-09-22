@@ -48,7 +48,7 @@ const TOOL_REGISTRY = {
       const course = await Course.findById(courseId)
         .select('title subtitle description level category duration skills prerequisites modules isPublished')
         .lean();
-      if (!course || (!course.isPublished && user.role?.toUpperCase() !== 'ADMIN' && String(course.instructor) !== String(user._id))) {
+      if (!course || course.isDeleted || (!course.isPublished && user.role?.toUpperCase() !== 'ADMIN' && String(course.instructor) !== String(user._id))) {
         throw new Error('Course not found or inaccessible');
       }
       return course;
